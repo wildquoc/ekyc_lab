@@ -1,6 +1,6 @@
-# FKYC – desktop eKYC (PySide6)
+# FKYC
 
-Ứng dụng desktop đăng ký / đăng nhập FaceID: quét CCCD, mã vạch thẻ SV, enroll khuôn mặt (FQA, liveness, PAD), lưu embedding ArcFace vào SQLite.
+App đăng ký và đăng nhập FaceID: quét CCCD, mã vạch thẻ SV, enroll khuôn mặt (FQA, liveness, PAD), lưu embedding ArcFace vào SQLite.
 
 ## Chạy
 
@@ -15,7 +15,7 @@ pip install -r backend/requirements-dev.txt   # pytest
 .\run.bat
 ```
 
-`run.bat` gọi `python -m fkyc`. Nếu camera bị chiếm, đóng Zoom/Teams/tab khác đang mở webcam.
+`run.bat` gọi `python -m fkyc`. Nếu camera bị chiếm đóng Zoom/Teams/tab khác đang mở webcam.
 
 ```powershell
 python -m pytest backend/tests -q
@@ -29,8 +29,8 @@ ekyc_lab/
 ├── assets/                    # logo + icon login
 ├── fkyc/                      # Qt/QML desktop
 └── backend/                   # OCR, barcode, face, SQLite
-    ├── data/ekyc.db           # hồ sơ (không commit)
+    ├── data/ekyc.db           # hồ sơ (không commit lên)
     └── models/                # MiniFASNet, ArcFace, VietOCR ONNX
 ```
 
-Hồ sơ chỉ được ghi khi Confirm màn face result. Ảnh chân dung mã hóa tại `backend/data/portraits/*.enc`.
+Hồ sơ chỉ được ghi khi Confirm face result. Ảnh chân dung mã hóa tại `backend/data/portraits/*.enc`.

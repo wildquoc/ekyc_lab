@@ -34,7 +34,11 @@ class ArcFaceExtractor:
     def __init__(self, model_path: Optional[str] = None):
         if model_path is None:
             # 1. Ưu tiên trong backend/models/w600k_r50.onnx
-            local_path = os.path.join(os.path.dirname(__file__), "models", "w600k_r50.onnx")
+            try:
+                from paths import models_dir as _models_dir
+            except ImportError:
+                from backend.paths import models_dir as _models_dir
+            local_path = str(_models_dir() / "w600k_r50.onnx")
             # 2. Dự phòng trong cache insightface của hệ thống
             system_cache = os.path.expanduser(r"~/.insightface/models/buffalo_l/w600k_r50.onnx")
 

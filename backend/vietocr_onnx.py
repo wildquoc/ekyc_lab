@@ -8,7 +8,12 @@ from typing import Dict, Optional
 import cv2
 import numpy as np
 
-_DIR = os.path.join(os.path.dirname(__file__), "models", "vietocr")
+try:
+    from paths import models_dir as _models_dir
+except ImportError:
+    from backend.paths import models_dir as _models_dir
+
+_DIR = str(_models_dir() / "vietocr")
 _GO, _EOS = 1, 2
 _PAD_MIN_W = 32
 _DEFAULT_MAX_W = 400

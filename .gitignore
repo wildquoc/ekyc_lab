@@ -11,6 +11,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# PyInstaller
+build/
+# dist/ already ignored below via dist/
+
 # Pytest & Coverage
 .pytest_cache/
 .coverage

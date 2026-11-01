@@ -76,7 +76,12 @@ FINAL_MAX_POSE = dict(yaw=16.0, pitch=16.0, roll=12.0)
 # ---------------------------------------------------------------------------
 # (e) CHỐNG GIẢ MẠO ẢNH & VIDEO (PASSIVE ANTI-SPOOFING / PAD)
 # ---------------------------------------------------------------------------
-MINIFASNET_MODEL_PATH = os.path.join(os.path.dirname(__file__), "models", "minifasnet_v2.onnx")
+try:
+    from paths import models_dir as _models_dir, log_dir as _log_dir
+except ImportError:
+    from backend.paths import models_dir as _models_dir, log_dir as _log_dir
+
+MINIFASNET_MODEL_PATH = str(_models_dir() / "minifasnet_v2.onnx")
 ANTISPOOF_REQUIRE_MODEL = True         # Thiếu/lỗi model -> từ chối thay vì mặc định coi là người thật
 ANTISPOOF_REAL_THRESH = 0.65           # Ngưỡng tin cậy Real face của MiniFASNet (chuẩn production)
 ANTISPOOF_PRINT_THRESH = 0.50          # Ngưỡng phát hiện ảnh in 2D (nhạy bén chặn ảnh in)
@@ -125,7 +130,7 @@ RATE_LIMIT_PER_MINUTE = int(os.environ.get("EKYC_RATE_LIMIT_PER_MIN", "3600"))
 DATA_ENCRYPTION_KEY = os.environ.get("EKYC_DATA_KEY", "qat-ekyc-biometric-secret-key-2026")
 
 # Thư mục lưu log hệ thống
-LOG_DIR = os.path.join(os.path.dirname(__file__), "logs")
+LOG_DIR = str(_log_dir())
 
 # Ngưỡng Cosine Similarity tiêu chuẩn cho ArcFace 512D (FAR < 0.0001% trên WebFace600K)
 DEFAULT_VERIFY_THRESHOLD = float(os.environ.get("EKYC_DEFAULT_VERIFY_THRESHOLD", "0.55"))

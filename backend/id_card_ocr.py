@@ -25,7 +25,12 @@ CARD_RATIO = 85.6 / 53.98          # Tỉ lệ chuẩn ISO/IEC 7810 ID-1
 WARP_W = 1200
 WARP_H = int(round(WARP_W / CARD_RATIO))
 OCR_MAX_W = 640
-_VIETOCR_DIR = os.path.join(os.path.dirname(__file__), "models", "vietocr")
+try:
+    from paths import models_dir as _models_dir
+except ImportError:
+    from backend.paths import models_dir as _models_dir
+
+_VIETOCR_DIR = str(_models_dir() / "vietocr")
 
 MIN_SHARPNESS = 22.0               # Phương sai Laplacian tối thiểu ở Pha 1 (nới nhạy cho webcam)
 MIN_SHARPNESS_ZOOM = 10.0          # Ngưỡng nét nới lỏng tối đa ở Pha 2 khi zoom gần

@@ -16,12 +16,14 @@ import config as C
 from head_pose import estimate_head_pose
 from anti_spoofing import AntiSpoofDetector, AntiSpoofResult, AntiSpoofSampler
 
-try:  # mediapipe chỉ cần khi chạy thật; unit test có thể chạy không cần
+_MP_IMPORT_ERROR = ""
+try:
     import mediapipe as mp
 
     _FACE_OVAL_IDX = sorted({i for edge in mp.solutions.face_mesh.FACEMESH_FACE_OVAL for i in edge})
-except Exception:  # pragma: no cover
+except Exception as exc:  # pragma: no cover
     mp = None
+    _MP_IMPORT_ERROR = f"{type(exc).__name__}: {exc}"
     _FACE_OVAL_IDX = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400,
                       377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109]
 
@@ -137,7 +139,7 @@ class FaceAnalyzer:
 
     def __init__(self, stream: bool = False) -> None:
         if mp is None:
-            raise RuntimeError("mediapipe chưa được cài đặt")
+            raise RuntimeError(_MP_IMPORT_ERROR or "mediapipe chưa được cài đặt")
         is_static = not stream
         self._mesh = mp.solutions.face_mesh.FaceMesh(
             static_image_mode=is_static,

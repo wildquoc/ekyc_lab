@@ -17,6 +17,16 @@ pip install -r backend/requirements-dev.txt   # pytest
 
 `run.bat` gọi `python -m fkyc`. Nếu camera bị chiếm, đóng Zoom/Teams/tab khác đang mở webcam.
 
+## Đóng gói bấm chạy (Windows)
+
+Máy build cần `.venv` như trên. Máy chạy exe **không** cần Python.
+
+```powershell
+.\build.bat
+```
+
+Kết quả: `dist\FKYC\FKYC.exe`. Copy **cả thư mục** `dist\FKYC` sang máy khác, bấm `FKYC.exe`. Hồ sơ lưu ở `%LOCALAPPDATA%\FKYC`.
+
 ```powershell
 python -m pytest backend/tests -q
 ```

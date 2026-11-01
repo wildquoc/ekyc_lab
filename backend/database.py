@@ -24,13 +24,16 @@ import numpy as np
 try:
     from feature_extractor import get_arcface_extractor
     import config as C
+    from paths import data_dir as _data_dir
 except ImportError:
     from backend.feature_extractor import get_arcface_extractor
     import backend.config as C
+    from backend.paths import data_dir as _data_dir
 
-DB_DIR = os.path.join(os.path.dirname(__file__), "data")
-DB_PATH = os.path.join(DB_DIR, "ekyc.db")
-PORTRAIT_DIR = os.path.join(DB_DIR, "portraits")
+_DATA = _data_dir()
+DB_DIR = str(_DATA)
+DB_PATH = str(_DATA / "ekyc.db")
+PORTRAIT_DIR = str(_DATA / "portraits")
 ENC_PREFIX = "enc_file://"
 
 _db_lock = threading.Lock()

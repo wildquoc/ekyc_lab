@@ -1,0 +1,1 @@
+"""FKYC desktop shell."""

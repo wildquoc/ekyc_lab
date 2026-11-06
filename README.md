@@ -2,6 +2,9 @@
 
 App đăng ký và đăng nhập FaceID: quét CCCD, mã vạch thẻ SV, enroll khuôn mặt (FQA, liveness, PAD), lưu embedding ArcFace vào SQLite.
 
+<img width="1280" height="731" alt="image" src="https://github.com/user-attachments/assets/568e274a-5fea-4b6f-83da-531bbcf4c43b" />
+
+
 ## Chạy
 
 Yêu cầu Python 3.11. Model nằm trong `backend/models/` (`w600k_r50.onnx` cần Git LFS).

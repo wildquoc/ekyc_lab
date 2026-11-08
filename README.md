@@ -1,60 +1,47 @@
 # FKYC
 
-App đăng ký và đăng nhập FaceID: quét CCCD, mã vạch thẻ SV, enroll khuôn mặt (FQA, liveness, PAD), lưu embedding ArcFace vào SQLite.
+App desktop đăng ký và đăng nhập FaceID: quét căn cước, mã vạch thẻ sinh viên, rồi lưu khuôn mặt trên máy đang chạy.
 
-<img width="932" height="656" alt="image" src="https://github.com/user-attachments/assets/365ad75b-306c-49f7-9da6-18d61c6c7f38" />
+<img width="1280" height="731" alt="FKYC" src="https://github.com/user-attachments/assets/568e274a-5fea-4b6f-83da-531bbcf4c43b" />
 
-## Chạy
+## Cài và chạy
 
-Yêu cầu Python 3.11. Model nằm trong `backend/models/` (`w600k_r50.onnx` cần Git LFS).
+Cần Python 3.11 và [Git LFS](https://git-lfs.com) (file `backend/models/w600k_r50.onnx`).
 
 ```powershell
+git lfs install
+git lfs pull
 py -3.11 -m venv .venv
 .\.venv\Scripts\activate
 pip install -r backend/requirements.txt
-pip install -r backend/requirements-dev.txt   # pytest
-
 .\run.bat
 ```
 
-`run.bat` gọi `python -m fkyc`. Nếu camera bị chiếm đóng Zoom/Teams/tab khác đang mở webcam.
+`run.bat` mở app Qt. Nếu hình camera không lên, tắt Zoom, Teams hoặc tab trình duyệt đang dùng webcam rồi chạy lại.
 
-## Đóng gói bấm chạy (Windows)
+## Đăng nhập
 
-Máy build cần `.venv` như trên. Máy chạy exe **không** cần Python.
+Mọi máy clone về đều dùng chung tài khoản trong `backend/security/accounts.json`:
 
-```powershell
-.\build.bat
-```
+| Username | Password |
+| --- | --- |
+| pkq | 204120 |
+| lha | 204130 |
+| nvt | 190509 |
 
-Kết quả: `dist\FKYC\FKYC.exe`. Copy **cả thư mục** `dist\FKYC` sang máy khác, bấm `FKYC.exe`. Hồ sơ lưu ở `%LOCALAPPDATA%\FKYC`.
+Trên màn hình đầu, **Log in manually** mở hai ô username và mật khẩu. Đúng tài khoản thì vào Welcome.
 
-```powershell
-python -m pytest backend/tests -q
-```
+**Login with FaceID** chỉ khớp khuôn mặt đã đăng ký trên chính máy đó. Máy mới chưa có hồ sơ sẽ không nhận mặt.
 
-## Cấu trúc
+## Đăng ký khuôn mặt
 
-```
-ekyc_lab/
-├── run.bat
-├── assets/                    # logo + icon login
-├── fkyc/                      # Qt/QML desktop
-└── backend/                   # OCR, barcode, face, SQLite
-<<<<<<< HEAD
-    ├── security/accounts.json # tài khoản đăng nhập thủ công cho team test
-    ├── data/ekyc.db           # hồ sơ FaceID local, không commit
-    ├── data/portraits/        # ảnh mặt local, không commit
-    └── models/                # MiniFASNet, ArcFace, VietOCR ONNX
-```
+1. Đăng nhập thủ công.
+2. Bấm **Register FaceID** (nếu username đã có hồ sơ trên máy này, nút là **Register again** và dòng chữ là **Your FaceID is ready**).
+3. Quét căn cước, rồi thẻ sinh viên, rồi khuôn mặt.
+4. Bấm Confirm. Hồ sơ gắn với username vừa đăng nhập.
 
-`backend/security/accounts.json` đi cùng repo. Máy nào clone về cũng đăng nhập thủ công được bằng **pkq** / **204120** và **lha** / **204130**.
+Ảnh mặt và database nằm ở `backend/data/`, không có trên GitHub. Đăng ký trên máy nào thì chỉ máy đó đăng nhập được bằng mặt. Đăng ký lại cùng username sẽ ghi đè hồ sơ cũ của username đó trên máy này.
 
-Ảnh mặt và `ekyc.db` không đưa lên GitHub. FaceID đăng ký trên máy nào thì chỉ máy đó nhận ra. Sau khi đăng nhập thủ công, Register FaceID trên máy đó sẽ gắn hồ sơ mới với username vừa nhập.
-=======
-    ├── data/ekyc.db           # hồ sơ (không commit lên)
-    └── models/                # MiniFASNet, ArcFace, VietOCR ONNX
-```
+## Đóng gói
 
-Hồ sơ chỉ được ghi khi Confirm face result. Ảnh chân dung mã hóa tại `backend/data/portraits/*.enc`.
->>>>>>> 20ca74e84c208aeb2d3e4c35709a6c52c00cfaa9
+Máy đã cài `.venv` có thể chạy `.\build.bat`. Bản chạy là cả thư mục `dist\FKYC\`, không chỉ mỗi file exe. Bản exe lưu hồ sơ ở `%LOCALAPPDATA%\FKYC`, không dùng `backend/data` của repo.

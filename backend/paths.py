@@ -33,6 +33,15 @@ def shared_assets_dir() -> Path:
     return resource_root() / "assets"
 
 
+def accounts_file() -> Path:
+    """File tài khoản đăng nhập thủ công. Bản đóng gói ưu tiên file cạnh exe."""
+    if frozen():
+        beside = Path(sys.executable).resolve().parent / "security" / "accounts.json"
+        if beside.is_file():
+            return beside
+    return resource_root() / "backend" / "security" / "accounts.json"
+
+
 def data_dir() -> Path:
     """SQLite + chân dung: cạnh source khi dev, %LOCALAPPDATA%\\FKYC khi đóng gói."""
     if frozen():

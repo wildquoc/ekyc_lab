@@ -60,9 +60,9 @@ Item {
     }
 
     Item {
-        x: page.ox + 267 * page.unit
+        x: page.ox + 292 * page.unit
         y: page.oy + 756 * page.unit
-        width: 400 * page.unit
+        width: 352 * page.unit
         height: 56 * page.unit
         Row {
             anchors.centerIn: parent
@@ -80,11 +80,10 @@ Item {
                 height: 56 * page.unit
                 frosted: true
                 blurSource: page.blurSource
-                label: "Register"
-                fadedSuffix: "FaceID"
+                label: "Log in manually"
                 labelSize: 24 * page.unit
                 textFont: "SF Pro Display"
-                onClicked: bridge.startRegister()
+                onClicked: bridge.startManual()
             }
         }
     }

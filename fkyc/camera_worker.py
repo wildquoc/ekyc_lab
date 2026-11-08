@@ -199,14 +199,25 @@ class CameraWorker(QThread):
             cap.set(cv2.CAP_PROP_AUTOFOCUS, 1)
         except Exception:
             pass
-        # Webcam DirectShow hay kẹt exposure thủ công (màn hình đen) sau lần chỉnh trước.
-        for auto_exp in (0.75, 3.0, 1.0):
+        # DirectShow: 0.75 là tự động. Không kết thúc bằng 1.0 — giá trị đó khóa phơi sáng thủ công và khung hình tối đen.
+        try:
+            cap.set(cv2.CAP_PROP_BRIGHTNESS, 155)
+            cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)
+        except Exception:
+            pass
+        mean = 0.0
+        for _ in range(8):
+            ok, frame = cap.read()
+            if ok and frame is not None:
+                mean = float(frame.mean())
+        if mean < 40:
             try:
-                cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, auto_exp)
+                cap.set(cv2.CAP_PROP_BRIGHTNESS, 185)
+                cap.set(cv2.CAP_PROP_AUTO_EXPOSURE, 0.75)
             except Exception:
                 pass
-        for _ in range(6):
-            cap.read()
+            for _ in range(4):
+                cap.read()
         return cap
 
     def _refocus(self, cap) -> None:

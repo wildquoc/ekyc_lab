@@ -39,8 +39,12 @@ ekyc_lab/
 ├── assets/                    # logo + icon login
 ├── fkyc/                      # Qt/QML desktop
 └── backend/                   # OCR, barcode, face, SQLite
-    ├── data/ekyc.db           # hồ sơ (không commit)
+    ├── security/accounts.json # tài khoản đăng nhập thủ công cho team test
+    ├── data/ekyc.db           # hồ sơ FaceID local, không commit
+    ├── data/portraits/        # ảnh mặt local, không commit
     └── models/                # MiniFASNet, ArcFace, VietOCR ONNX
 ```
 
-Hồ sơ chỉ được ghi khi Confirm màn face result. Ảnh chân dung mã hóa tại `backend/data/portraits/*.enc`.
+`backend/security/accounts.json` đi cùng repo. Máy nào clone về cũng đăng nhập thủ công được bằng **pkq** / **204120** và **lha** / **204130**.
+
+Ảnh mặt và `ekyc.db` không đưa lên GitHub. FaceID đăng ký trên máy nào thì chỉ máy đó nhận ra. Sau khi đăng nhập thủ công, Register FaceID trên máy đó sẽ gắn hồ sơ mới với username vừa nhập.

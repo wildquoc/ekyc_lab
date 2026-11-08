@@ -52,6 +52,8 @@ class Bridge(QObject):
             "gender": "",
             "dob": "",
             "studentId": "",
+            "username": "",
+            "faceReady": "",
         }
         self._match_score = 0.0
         self._error = ""
@@ -205,6 +207,18 @@ class Bridge(QObject):
     @Slot()
     def startRegister(self) -> None:
         self._submit("start_register")
+
+    @Slot()
+    def startManual(self) -> None:
+        self._submit("start_manual")
+
+    @Slot(str, str)
+    def submitManual(self, username: str, password: str) -> None:
+        self._submit(json.dumps({
+            "cmd": "manual_login",
+            "username": username,
+            "password": password,
+        }, ensure_ascii=False))
 
     @Slot()
     def captureManual(self) -> None:

@@ -27,6 +27,7 @@ except Exception:
     hiddenimports.append("zxingcpp")
 
 datas += [
+    (os.path.join(ROOT, "backend", "security", "accounts.json"), os.path.join("backend", "security")),
     (os.path.join(ROOT, "fkyc", "qml"), os.path.join("fkyc", "qml")),
     (os.path.join(ROOT, "fkyc", "assets"), os.path.join("fkyc", "assets")),
     (os.path.join(ROOT, "assets"), "assets"),
@@ -70,6 +71,7 @@ hiddenimports += [
     "anti_spoofing",
     "head_pose",
     "vietocr_onnx",
+    "manual_accounts",
     "PySide6.QtCore",
     "PySide6.QtGui",
     "PySide6.QtQml",

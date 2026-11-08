@@ -34,7 +34,10 @@ yarn-error.log*
 *.db
 logs/
 backend/logs/
-backend/data/portraits/
+
+# Ảnh mặt và hồ sơ FaceID không đưa lên GitHub. Tài khoản trong backend/security/accounts.json vẫn được commit.
+backend/data/ekyc.db
+backend/data/portraits/*
 
 # Environment variables
 .env

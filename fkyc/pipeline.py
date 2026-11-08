@@ -1,6 +1,8 @@
 """Máy trạng thái giao diện FKYC. Chạy trên luồng camera, không đụng QML."""
 from __future__ import annotations
 
+import hmac
+import json
 import threading
 import time
 import uuid
@@ -26,6 +28,14 @@ _FACE_CANVAS = (480, 600)
 _GUIDE_W_FRAC = 0.72
 _GUIDE_H_CAP = 1.2
 _CARD_RATIO = 1.586
+
+def _same_secret(left: str, right: str) -> bool:
+    a = left.encode("utf-8")
+    b = right.encode("utf-8")
+    if len(a) != len(b):
+        return False
+    return hmac.compare_digest(a, b)
+
 
 GUIDE_STEPS = (
     ("device", "Device check", "Resolution and signal"),
@@ -188,7 +198,11 @@ class SessionEngine:
             "gender": "",
             "dob": "",
             "studentId": "",
+            "username": "",
+            "faceReady": "",
         }
+        self._account = ""
+        self._replace_id = ""
         self._services = None
         self._session = None
         self._challenge_mgr = None
@@ -258,19 +272,66 @@ class SessionEngine:
             begun["landingNotice"] = ""
             return begun
         if command == "start_register":
+            if not self._account:
+                return self._mark(errorText="Log in manually before registering.", cameraActive=False)
+            account = self._account
+            ready = self.fields.get("faceReady", "")
             self.fields = {key: "" for key in self.fields}
+            self.fields["username"] = account
+            self.fields["faceReady"] = ready
             self._close_session()
             begun = self._begin("citizen")
             begun["landingNotice"] = ""
+            begun.update(self._mark(fields=dict(self.fields)))
             return begun
+        if command == "start_manual":
+            self._account = ""
+            self._replace_id = ""
+            self.fields["username"] = ""
+            self.fields["faceReady"] = ""
+            self._close_session()
+            self.camera_on = False
+            self._flash = None
+            return self._mark(
+                screen="manualLogin",
+                cameraActive=False,
+                errorText="",
+                busy=False,
+                captureHint=False,
+                flashActive=False,
+                prompt="Log in manually",
+                fields=dict(self.fields),
+            )
+        if command.startswith("{"):
+            try:
+                payload = json.loads(command)
+            except json.JSONDecodeError:
+                return {}
+            if payload.get("cmd") == "manual_login":
+                return self._manual_login(
+                    str(payload.get("username") or ""),
+                    str(payload.get("password") or ""),
+                )
         if command == "capture_manual":
             self._force = True
             return {}
         if command == "cancel" or command == "go_home":
+            self._account = ""
+            self._replace_id = ""
+            self.fields["username"] = ""
+            self.fields["faceReady"] = ""
             self._close_session()
             self.camera_on = False
             self._flash = None
-            return self._mark(screen="landing", cameraActive=False, flashActive=False, errorText="", busy=False, captureHint=False)
+            return self._mark(
+                screen="landing",
+                cameraActive=False,
+                flashActive=False,
+                errorText="",
+                busy=False,
+                captureHint=False,
+                fields=dict(self.fields),
+            )
         if command == "confirm":
             return self._confirm()
         if command == "redo":
@@ -302,6 +363,40 @@ class SessionEngine:
             stage="camera_check",
             progress=0.0,
             guides=_guides("camera_check"),
+        )
+
+    def _manual_login(self, username: str, password: str) -> Dict[str, Any]:
+        from manual_accounts import load_manual_accounts
+
+        name = username.strip()
+        matched_name = ""
+        for saved_user, saved_pass in load_manual_accounts():
+            if _same_secret(name, saved_user) and _same_secret(password, saved_pass):
+                matched_name = saved_user
+                break
+        if not matched_name:
+            return self._mark(
+                screen="manualLogin",
+                cameraActive=False,
+                errorText="Incorrect username or password.",
+                busy=False,
+            )
+        from database import face_user_id
+
+        self._account = matched_name
+        self._replace_id = face_user_id(matched_name)
+        self.fields["username"] = matched_name
+        self.fields["faceReady"] = "yes" if self._replace_id else ""
+        self.camera_on = False
+        return self._mark(
+            screen="welcome",
+            cameraActive=False,
+            errorText="",
+            busy=False,
+            captureHint=False,
+            flashActive=False,
+            prompt="Welcome",
+            fields=dict(self.fields),
         )
 
     def _default_prompt(self, screen: str) -> str:
@@ -348,7 +443,15 @@ class SessionEngine:
 
     def on_frame(self, frame: np.ndarray, fps: float) -> Dict[str, Any]:
         self._latest = frame
-        if not self.camera_on or self.screen in ("landing", "loginResult", "citizenResult", "studentResult", "faceResult"):
+        if not self.camera_on or self.screen in (
+            "landing",
+            "manualLogin",
+            "welcome",
+            "loginResult",
+            "citizenResult",
+            "studentResult",
+            "faceResult",
+        ):
             return {}
         hint = (time.time() - self._step_started) >= HINT_SEC
         patch: Dict[str, Any] = {}
@@ -430,6 +533,7 @@ class SessionEngine:
             "gender": str(meta.get("gender") or ""),
             "dob": str(meta.get("dob") or ""),
             "studentId": str(meta.get("student_id") or ""),
+            "username": str(meta.get("username") or ""),
         }
         self.fields = fields
         self.screen = "loginResult"
@@ -796,7 +900,13 @@ class SessionEngine:
             dob=self.fields.get("dob") or None,
             gender=self.fields.get("gender") or None,
             student_id=(self.fields.get("studentId") or None) if include_student else None,
+            username=self._account or None,
         )
+
+    def _same_saved_profile(self, existing: Any) -> bool:
+        if not self._replace_id or not isinstance(existing, dict):
+            return False
+        return str(existing.get("user_id") or "") == self._replace_id
 
     def _reject_existing(self, existing=None) -> Dict[str, Any]:
         self._close_session()
@@ -839,7 +949,7 @@ class SessionEngine:
             if not all(self.fields[key] for key in ("citizenId", "fullName", "dob", "gender")):
                 return self._mark(errorText="Thiếu thông tin CCCD. Bấm Redo để quét lại.")
             existing = self._existing_profile()
-            if existing:
+            if existing and not self._same_saved_profile(existing):
                 return self._reject_existing(existing)
             self.screen = "student"
             self._step_started = time.time()
@@ -849,7 +959,7 @@ class SessionEngine:
             if not self.fields["studentId"]:
                 return self._mark(errorText="Chưa có mã sinh viên.")
             existing = self._existing_profile(include_student=True)
-            if existing:
+            if existing and not self._same_saved_profile(existing):
                 return self._reject_existing(existing)
             self._close_session()
             self._capture_sent = False
@@ -864,7 +974,11 @@ class SessionEngine:
         if self.screen == "loginResult":
             return self._begin("login")
         if self.screen == "citizenResult":
+            account = self._account
+            ready = self.fields.get("faceReady", "")
             self.fields = {key: "" for key in self.fields}
+            self.fields["username"] = account
+            self.fields["faceReady"] = ready
             return self._begin("citizen") | self._mark(fields=dict(self.fields))
         if self.screen == "studentResult":
             self.fields["studentId"] = ""
@@ -892,21 +1006,26 @@ class SessionEngine:
             frame = self._latest
         if frame is None:
             return self._mark(errorText="Không còn ảnh chân dung để lưu.")
+        if not self._account:
+            return self._mark(errorText="Log in manually before registering.")
         svc = self._load()
         existing = self._existing_profile(include_student=True)
-        if existing:
+        if existing and not self._same_saved_profile(existing):
             return self._reject_existing(existing)
         try:
             match = svc["state"].user_repo.match_user_1_to_n(self._session.final_embedding)
-            if match.get("is_match"):
-                return self._reject_existing(match.get("matched_user"))
+            matched = match.get("matched_user")
+            if match.get("is_match") and not self._same_saved_profile(matched):
+                return self._reject_existing(matched)
         except Exception:
             pass
+        account = self._account
         meta = {
             "id_number": self.fields["citizenId"],
             "dob": self.fields["dob"],
             "gender": self.fields["gender"],
             "student_id": self.fields["studentId"],
+            "username": account,
         }
         try:
             from database import DuplicateUserError
@@ -915,6 +1034,7 @@ class SessionEngine:
                 full_name=self.fields["fullName"] or "Sinh vien",
                 embedding=self._session.final_embedding,
                 snapshot_b64=_jpeg_data_url(frame),
+                user_id=self._replace_id or None,
                 metadata=meta,
             )
         except DuplicateUserError as exc:
@@ -923,7 +1043,19 @@ class SessionEngine:
             return self._mark(errorText=f"Không lưu được hồ sơ: {exc}", busy=False)
         self._close_session()
         self.camera_on = False
+        self._account = ""
+        self._replace_id = ""
+        self.fields["username"] = ""
+        self.fields["faceReady"] = ""
         user_id = saved.get("user_id", "")
-        patch = self._mark(screen="landing", cameraActive=False, busy=False, errorText="", flashActive=False)
+        patch = self._mark(
+            screen="landing",
+            cameraActive=False,
+            busy=False,
+            errorText="",
+            flashActive=False,
+            fields=dict(self.fields),
+        )
         patch["savedUserId"] = user_id
+        patch["landingNotice"] = f"Face profile linked to {account}."
         return patch

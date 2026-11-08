@@ -154,6 +154,28 @@ def _get_connection() -> sqlite3.Connection:
     return conn
 
 
+def face_user_id(username: str) -> str:
+    """user_id của hồ sơ khuôn mặt đã gắn với username, hoặc chuỗi rỗng."""
+    key = (username or "").strip().lower()
+    if not key:
+        return ""
+    init_db()
+    with _db_lock:
+        conn = _get_connection()
+        try:
+            rows = conn.execute("SELECT user_id, metadata_json FROM users").fetchall()
+        finally:
+            conn.close()
+    for row in rows:
+        try:
+            meta = json.loads(row["metadata_json"] or "{}")
+        except Exception:
+            meta = {}
+        if str(meta.get("username") or "").strip().lower() == key:
+            return str(row["user_id"])
+    return ""
+
+
 def init_db():
     """Khởi tạo cấu trúc bảng SQLite nếu chưa tồn tại và chuẩn hóa họ tên không dấu."""
     with _db_lock:
@@ -225,6 +247,7 @@ class UserRepository:
             dob=meta.get("dob"),
             gender=meta.get("gender"),
             student_id=meta.get("student_id"),
+            username=meta.get("username"),
         )
         if existing and existing.get("user_id") != user_id:
             raise DuplicateUserError(existing)
@@ -335,8 +358,9 @@ class UserRepository:
         dob: Optional[str] = None,
         gender: Optional[str] = None,
         student_id: Optional[str] = None,
+        username: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Tìm hồ sơ đã đăng ký theo CCCD, MSSV, hoặc (họ tên + ngày sinh + giới tính)."""
+        """Tìm hồ sơ đã đăng ký theo username, CCCD, MSSV, hoặc (họ tên + ngày sinh + giới tính)."""
 
         def _norm(s: Optional[str]) -> str:
             return strip_vietnamese_accents(s or "").upper()
@@ -354,6 +378,7 @@ class UserRepository:
 
         key_id = _norm_id(id_number)
         key_student = _norm(student_id)
+        key_user = (username or "").strip().lower()
         key_name, key_dob, key_gender = _norm(full_name), (dob or "").strip(), _norm_gender(gender)
         with _db_lock:
             conn = _get_connection()
@@ -369,6 +394,7 @@ class UserRepository:
                 meta = json.loads(r["metadata_json"] or "{}")
             except Exception:
                 meta = {}
+            same_user = bool(key_user) and str(meta.get("username") or "").strip().lower() == key_user
             same_id = bool(key_id) and _norm_id(meta.get("id_number")) == key_id
             same_student = bool(key_student) and _norm(meta.get("student_id")) == key_student
             same_person = (
@@ -377,14 +403,22 @@ class UserRepository:
                 and str(meta.get("dob", "")).strip() == key_dob
                 and _norm_gender(meta.get("gender")) == key_gender
             )
-            if same_id or same_student or same_person:
-                how = "id_number" if same_id else ("student_id" if same_student else "name_dob_gender")
+            if same_user or same_id or same_student or same_person:
+                if same_user:
+                    how = "username"
+                elif same_id:
+                    how = "id_number"
+                elif same_student:
+                    how = "student_id"
+                else:
+                    how = "name_dob_gender"
                 return {
                     "user_id": r["user_id"],
                     "full_name": strip_vietnamese_accents(r["full_name"]),
                     "created_at": r["created_at"],
                     "id_number": meta.get("id_number"),
                     "student_id": meta.get("student_id"),
+                    "username": meta.get("username"),
                     "matched_by": how,
                 }
         return None

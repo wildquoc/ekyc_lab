@@ -66,6 +66,10 @@ _EXACT = {
     "Không còn ảnh chân dung để lưu.": "No portrait to save.",
     "Khuôn mặt chưa đạt. Giữ thẳng và đủ sáng.": "Face not ready. Look straight.",
     "Không tìm thấy khuôn mặt trong hồ sơ.": "No matching face in records.",
+    "Incorrect username or password.": "Incorrect username or password.",
+    "Log in manually": "Log in manually",
+    "Welcome": "Welcome",
+    "Log in manually before registering.": "Log in manually before registering.",
 }
 
 _PHRASES = (

@@ -12,7 +12,7 @@ Item {
         visible: bridge.screen === "login"
         anchors.horizontalCenter: parent.left
         anchors.horizontalCenterOffset: ox + (Theme.cardX + Theme.cardW / 2) * unit
-        y: oy + (Theme.cardY + 48 + Theme.faceCamH + 24) * unit
+        y: oy + (Theme.cardY + 48 + Theme.loginCamDrop + Theme.faceCamH + 24) * unit
         text: "Login with FaceID"
         color: Theme.ink
         font.family: "SF Pro Display"

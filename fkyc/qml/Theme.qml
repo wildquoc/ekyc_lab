@@ -36,6 +36,7 @@ QtObject {
     readonly property int cardH: 872
     readonly property int faceCamW: 480
     readonly property int faceCamH: 600
+    readonly property int loginCamDrop: 64
     readonly property int loginPhotoW: 528
     readonly property int loginPhotoH: 400
     readonly property color processCurrent: "#9b1c1c"

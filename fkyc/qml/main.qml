@@ -41,7 +41,7 @@ ApplicationWindow {
     readonly property real loginPhotoW: Theme.loginPhotoW * win.unit
     readonly property real loginPhotoH: Theme.loginPhotoH * win.unit
     readonly property real cameraX: ovalScreen ? camX0 + (camCW - faceCamW) / 2 : framedPhotoScreen ? camX0 + 36 * win.unit : resultScreen ? camX0 + 28 * win.unit : camX0 + camPad
-    readonly property real cameraY: ovalScreen ? camY0 + 48 * win.unit : framedPhotoScreen ? camY0 + 36 * win.unit : resultScreen ? camY0 + 36 * win.unit : camY0 + camPad
+    readonly property real cameraY: ovalScreen ? camY0 + (48 + (bridge.screen === "login" ? Theme.loginCamDrop : 0)) * win.unit : framedPhotoScreen ? camY0 + 36 * win.unit : resultScreen ? camY0 + 36 * win.unit : camY0 + camPad
     readonly property real cameraW: ovalScreen ? faceCamW : framedPhotoScreen ? loginPhotoW : resultScreen ? camCW * 0.46 : camCW - camPad * 2
     readonly property real cameraH: ovalScreen ? faceCamH : framedPhotoScreen ? loginPhotoH : resultScreen ? camCH - 72 * win.unit : camCH - camPad * 2
 
@@ -65,7 +65,7 @@ ApplicationWindow {
     CameraViewport {
         id: cameraViewport
         z: 4
-        visible: bridge.screen !== "landing"
+        visible: bridge.screen !== "landing" && bridge.screen !== "manualLogin" && bridge.screen !== "welcome"
         unit: win.unit
         blurSource: campus
         x: win.cameraX
@@ -91,7 +91,7 @@ ApplicationWindow {
 
     PillButton {
         z: 5
-        visible: bridge.screen === "login" || bridge.screen === "citizen" || bridge.screen === "student" || bridge.screen === "face" || bridge.screen === "exam"
+        visible: bridge.screen === "login" || bridge.screen === "citizen" || bridge.screen === "student" || bridge.screen === "face" || bridge.screen === "exam" || bridge.screen === "manualLogin" || bridge.screen === "welcome"
         width: 58 * win.unit
         height: 58 * win.unit
         x: win.ox + Theme.cardX * win.unit - 74 * win.unit
@@ -135,10 +135,22 @@ ApplicationWindow {
         id: examPage
         ExamPage { unit: win.unit; ox: win.ox; oy: win.oy; blurSource: campus }
     }
+    Component {
+        id: manualPage
+        ManualLoginPage { unit: win.unit; ox: win.ox; oy: win.oy; blurSource: campus }
+    }
+    Component {
+        id: welcomePage
+        WelcomePage { unit: win.unit; ox: win.ox; oy: win.oy; blurSource: campus }
+    }
 
     function pageFor(screen) {
         if (screen === "landing")
             return landingPage
+        if (screen === "manualLogin")
+            return manualPage
+        if (screen === "welcome")
+            return welcomePage
         if (screen === "face")
             return facePage
         if (screen === "exam")

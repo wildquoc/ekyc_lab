@@ -2,8 +2,7 @@
 
 App đăng ký và đăng nhập FaceID: quét CCCD, mã vạch thẻ SV, enroll khuôn mặt (FQA, liveness, PAD), lưu embedding ArcFace vào SQLite.
 
-<img width="1280" height="731" alt="image" src="https://github.com/user-attachments/assets/568e274a-5fea-4b6f-83da-531bbcf4c43b" />
-
+<img width="932" height="656" alt="image" src="https://github.com/user-attachments/assets/365ad75b-306c-49f7-9da6-18d61c6c7f38" />
 
 ## Chạy
 

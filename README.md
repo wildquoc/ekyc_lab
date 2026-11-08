@@ -2,11 +2,12 @@
 
 App desktop đăng ký và đăng nhập FaceID: quét căn cước, mã vạch thẻ sinh viên, rồi lưu khuôn mặt trên máy đang chạy.
 
-<img width="1280" height="731" alt="FKYC" src="https://github.com/user-attachments/assets/568e274a-5fea-4b6f-83da-531bbcf4c43b" />
+<img width="1863" height="1312" alt="image" src="https://github.com/user-attachments/assets/2e39933b-0a22-42a4-96b7-cec473a24f60" />
+
 
 ## Cài và chạy
 
-Cần Python 3.11 và [Git LFS](https://git-lfs.com) (file `backend/models/w600k_r50.onnx`).
+Cần Python 3.11 và Git LFS (file `backend/models/w600k_r50.onnx`).
 
 ```powershell
 git lfs install
@@ -21,17 +22,11 @@ pip install -r backend/requirements.txt
 
 ## Đăng nhập
 
-Mọi máy clone về đều dùng chung tài khoản trong `backend/security/accounts.json`:
-
-| Username | Password |
-| --- | --- |
-| pkq | 204120 |
-| lha | 204130 |
-| nvt | 190509 |
+Tài khoản trong `backend/security/accounts.json`:
 
 Trên màn hình đầu, **Log in manually** mở hai ô username và mật khẩu. Đúng tài khoản thì vào Welcome.
 
-**Login with FaceID** chỉ khớp khuôn mặt đã đăng ký trên chính máy đó. Máy mới chưa có hồ sơ sẽ không nhận mặt.
+**Login with FaceID** chỉ khớp khuôn mặt đã đăng ký trên chính máy đó. Tạm thời máy mới chưa có hồ sơ sẽ không nhận mặt.
 
 ## Đăng ký khuôn mặt
 
@@ -44,4 +39,4 @@ Trên màn hình đầu, **Log in manually** mở hai ô username và mật kh�
 
 ## Đóng gói
 
-Máy đã cài `.venv` có thể chạy `.\build.bat`. Bản chạy là cả thư mục `dist\FKYC\`, không chỉ mỗi file exe. Bản exe lưu hồ sơ ở `%LOCALAPPDATA%\FKYC`, không dùng `backend/data` của repo.
+Máy đã cài `.venv` có thể chạy `.\build.bat`. Ngoài ra nếu không muốn cài venv thì test tạm thời bằng bản chạy exe là cả thư mục `dist\FKYC\`, không chỉ mỗi file exe, lưu hồ sơ ở `%LOCALAPPDATA%\FKYC` trên ổ C của máy, không dùng `backend/data` của repo.

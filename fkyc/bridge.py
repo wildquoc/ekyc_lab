@@ -20,6 +20,7 @@ class Bridge(QObject):
     flashActiveChanged = Signal()
     flashColorChanged = Signal()
     captureHintChanged = Signal()
+    stepBlockedChanged = Signal()
     guidesChanged = Signal()
     fieldsChanged = Signal()
     matchScoreChanged = Signal()
@@ -45,6 +46,7 @@ class Bridge(QObject):
         self._flash_active = False
         self._flash_color = "#000000"
         self._capture_hint = False
+        self._step_blocked = False
         self._guides = []
         self._fields = {
             "citizenId": "",
@@ -84,6 +86,7 @@ class Bridge(QObject):
             "flashActive": self._set_flash_active,
             "flashColor": self._set_flash_color,
             "captureHint": self._set_capture_hint,
+            "stepBlocked": self._set_step_blocked,
             "guides": self._set_guides,
             "fields": self._set_fields,
             "matchScore": self._set_match,
@@ -163,6 +166,12 @@ class Bridge(QObject):
         if value != self._capture_hint:
             self._capture_hint = value
             self.captureHintChanged.emit()
+
+    def _set_step_blocked(self, value: bool) -> None:
+        value = bool(value)
+        if value != self._step_blocked:
+            self._step_blocked = value
+            self.stepBlockedChanged.emit()
 
     def _set_guides(self, value) -> None:
         if value != self._guides:
@@ -251,6 +260,14 @@ class Bridge(QObject):
         self._submit("redo")
 
     @Slot()
+    def stepBack(self) -> None:
+        self._submit("step_back")
+
+    @Slot()
+    def stepNext(self) -> None:
+        self._submit("step_next")
+
+    @Slot()
     def goHome(self) -> None:
         self._submit("go_home")
 
@@ -293,6 +310,9 @@ class Bridge(QObject):
 
     def _capture_hint_value(self) -> bool:
         return self._capture_hint
+
+    def _step_blocked_value(self) -> bool:
+        return self._step_blocked
 
     def _guides_value(self):
         return self._guides
@@ -347,6 +367,7 @@ class Bridge(QObject):
     flashActive = Property(bool, _flash_active_value, notify=flashActiveChanged)
     flashColor = Property(str, _flash_color_value, notify=flashColorChanged)
     captureHint = Property(bool, _capture_hint_value, notify=captureHintChanged)
+    stepBlocked = Property(bool, _step_blocked_value, notify=stepBlockedChanged)
     guides = Property("QVariantList", _guides_value, notify=guidesChanged)
     fields = Property("QVariantMap", _fields_value, notify=fieldsChanged)
     matchScore = Property(float, _match_value, notify=matchScoreChanged)

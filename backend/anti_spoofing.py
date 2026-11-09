@@ -214,7 +214,7 @@ class AntiSpoofDetector:
         return verdict(False, "suspect", "warn", "Checking liveness...")
 
     def evaluate(self, frame_bgr: np.ndarray, bbox, landmarks_3d: Optional[np.ndarray] = None) -> AntiSpoofResult:
-        """Đo và quyết định trên một frame duy nhất (không làm mượt)."""
+        """Đo và quyết định trên một frame duy nhất."""
         return self.decide(self.measure(frame_bgr, bbox, landmarks_3d))
 
 

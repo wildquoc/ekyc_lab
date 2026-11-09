@@ -114,21 +114,29 @@ Item {
         milk: 0.28
     }
 
-    RoundPhoto {
+    component HoverPhoto: RoundPhoto {
+        HoverHandler { id: hover }
+        z: hover.hovered ? 2 : 0
+        scale: hover.hovered ? 1.08 : 1
+        transformOrigin: Item.Center
+        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+    }
+
+    HoverPhoto {
         x: page.ox + 801 * page.unit
         y: page.oy + 147 * page.unit
         width: 456 * page.unit
         height: 245 * page.unit
         source: assetRoot + "/photos/green_campus_card.png"
     }
-    RoundPhoto {
+    HoverPhoto {
         x: page.ox + 801 * page.unit
         y: page.oy + 414 * page.unit
         width: 280 * page.unit
         height: 190 * page.unit
         source: assetRoot + "/photos/classroom_card.png"
     }
-    RoundPhoto {
+    HoverPhoto {
         x: page.ox + 881 * page.unit
         y: page.oy + 626 * page.unit
         width: 376 * page.unit

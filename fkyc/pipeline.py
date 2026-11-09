@@ -204,6 +204,7 @@ class SessionEngine:
         self._account = ""
         self._replace_id = ""
         self._skip_cards = False
+        self.step_blocked = False
         self._services = None
         self._session = None
         self._challenge_mgr = None
@@ -339,11 +340,16 @@ class SessionEngine:
                 busy=False,
                 captureHint=False,
                 fields=dict(self.fields),
+                stepBlocked=False,
             )
         if command == "confirm":
             return self._confirm()
         if command == "redo":
             return self._redo()
+        if command == "step_back":
+            return self._step_back()
+        if command == "step_next":
+            return self._step_next()
         return {}
 
     def _begin(self, screen: str) -> Dict[str, Any]:
@@ -371,6 +377,7 @@ class SessionEngine:
             stage="camera_check",
             progress=0.0,
             guides=_guides("camera_check"),
+            stepBlocked=False,
         )
 
     def _manual_login(self, username: str, password: str) -> Dict[str, Any]:
@@ -442,6 +449,8 @@ class SessionEngine:
         for key, value in kwargs.items():
             if key in ("prompt", "errorText") and isinstance(value, str):
                 value = to_en(value)
+            if key == "stepBlocked":
+                self.step_blocked = bool(value)
             if self._cache.get(key) != value:
                 self._cache[key] = value
                 changed[key] = value
@@ -451,7 +460,7 @@ class SessionEngine:
 
     def on_frame(self, frame: np.ndarray, fps: float) -> Dict[str, Any]:
         self._latest = frame
-        if not self.camera_on or self.screen in (
+        if not self.camera_on or self.step_blocked or self.screen in (
             "landing",
             "manualLogin",
             "welcome",
@@ -930,6 +939,79 @@ class SessionEngine:
         )
         patch["landingNotice"] = to_en("Hồ sơ này đã tồn tại. Vui lòng đăng nhập.")
         return patch
+
+    def _register_order(self) -> List[str]:
+        if self._skip_cards:
+            return ["face"]
+        return ["citizen", "student", "face"]
+
+    def _register_index(self) -> int:
+        screen = self.screen
+        if screen in ("citizen", "citizenResult"):
+            step = "citizen"
+        elif screen in ("student", "studentResult"):
+            step = "student"
+        elif screen in ("face", "faceResult"):
+            step = "face"
+        else:
+            return -1
+        try:
+            return self._register_order().index(step)
+        except ValueError:
+            return -1
+
+    def _citizen_ready(self) -> bool:
+        return all(self.fields.get(key) for key in ("citizenId", "fullName", "dob", "gender"))
+
+    def _student_ready(self) -> bool:
+        return bool(self.fields.get("studentId"))
+
+    def _step_ready(self, step: str) -> bool:
+        if step == "student":
+            return self._citizen_ready()
+        if step == "face" and not self._skip_cards:
+            return self._citizen_ready() and self._student_ready()
+        return True
+
+    def _open_step(self, step: str) -> Dict[str, Any]:
+        if not self._step_ready(step):
+            self._close_session()
+            self.camera_on = True
+            return self._mark(
+                screen=step,
+                cameraActive=True,
+                errorText="",
+                busy=False,
+                captureHint=False,
+                flashActive=False,
+                prompt=self._default_prompt(step),
+                stage="camera_check",
+                progress=0.0,
+                guides=_guides("camera_check") if step == "face" else [],
+                stepBlocked=True,
+            )
+        if step == "face":
+            self._close_session()
+            self._capture_sent = False
+        elif step == "student":
+            self._barcode_count = 0
+            self._barcode_streak = ""
+        return self._begin(step)
+
+    def _step_back(self) -> Dict[str, Any]:
+        index = self._register_index()
+        if index < 0:
+            return {}
+        if index == 0:
+            return self.submit("cancel")
+        return self._open_step(self._register_order()[index - 1])
+
+    def _step_next(self) -> Dict[str, Any]:
+        order = self._register_order()
+        index = self._register_index()
+        if index < 0 or index >= len(order) - 1:
+            return {}
+        return self._open_step(order[index + 1])
 
     def _confirm(self) -> Dict[str, Any]:
         if self.screen == "loginResult":

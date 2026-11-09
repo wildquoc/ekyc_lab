@@ -58,6 +58,41 @@ def test_exception_user_skips_cards_then_enters_details():
     assert "every field" in missing["errorText"]
 
 
+def test_register_steps_can_skip_ahead_until_face():
+    engine = SessionEngine()
+    _login(engine, "pkq", "204120")
+    assert engine.submit("start_register")["screen"] == "citizen"
+
+    skipped = engine.submit("step_next")
+    assert skipped["screen"] == "student"
+    assert engine.step_blocked is True
+
+    back = engine.submit("step_back")
+    assert back["screen"] == "citizen"
+    assert engine.step_blocked is False
+
+    engine.fields.update({
+        "citizenId": "079206039167",
+        "fullName": "PHAM KIEN QUOC",
+        "dob": "13/01/2006",
+        "gender": "Nam",
+    })
+    opened = engine.submit("step_next")
+    assert opened["screen"] == "student"
+    assert engine.step_blocked is False
+
+    blocked_face = engine.submit("step_next")
+    assert blocked_face["screen"] == "face"
+    assert engine.step_blocked is True
+    assert engine.submit("step_next") == {}
+
+    assert engine.submit("step_back")["screen"] == "student"
+    engine.fields["studentId"] = "SE204120"
+    ready_face = engine.submit("step_next")
+    assert ready_face["screen"] == "face"
+    assert engine.step_blocked is False
+
+
 def test_register_without_manual_login_is_blocked():
     engine = SessionEngine()
     blocked = engine.submit("start_register")

@@ -89,9 +89,11 @@ ApplicationWindow {
         popExit: Transition { PauseAnimation { duration: 0 } }
     }
 
+    readonly property bool registerStep: bridge.screen === "citizen" || bridge.screen === "citizenResult" || bridge.screen === "student" || bridge.screen === "studentResult" || bridge.screen === "face" || bridge.screen === "faceResult"
+
     PillButton {
         z: 5
-        visible: bridge.screen === "login" || bridge.screen === "citizen" || bridge.screen === "student" || bridge.screen === "face" || bridge.screen === "exam" || bridge.screen === "manualLogin" || bridge.screen === "welcome" || bridge.screen === "details"
+        visible: bridge.screen === "login" || bridge.screen === "exam" || bridge.screen === "manualLogin" || bridge.screen === "welcome" || bridge.screen === "details" || win.registerStep
         width: 58 * win.unit
         height: 58 * win.unit
         x: win.ox + Theme.cardX * win.unit - 74 * win.unit
@@ -102,7 +104,40 @@ ApplicationWindow {
         label: "‹"
         labelSize: 34 * win.unit
         textFont: "SF Pro Display"
-        onClicked: bridge.cancel()
+        onClicked: win.registerStep ? bridge.stepBack() : bridge.cancel()
+    }
+
+    PillButton {
+        z: 5
+        visible: win.registerStep && bridge.screen !== "face" && bridge.screen !== "faceResult"
+        width: 58 * win.unit
+        height: 58 * win.unit
+        x: win.ox + (Theme.cardX + Theme.cardW) * win.unit + 16 * win.unit
+        y: win.oy + Theme.cardY * win.unit + Theme.cardH * win.unit / 2 - 29 * win.unit
+        frosted: true
+        frostFill: 0.18
+        blurSource: campus
+        label: "›"
+        labelSize: 34 * win.unit
+        textFont: "SF Pro Display"
+        onClicked: bridge.stepNext()
+    }
+
+    Text {
+        z: 5
+        visible: bridge.stepBlocked
+        x: cameraViewport.x + 24 * win.unit
+        y: cameraViewport.y + (cameraViewport.height - height) / 2
+        width: cameraViewport.width - 48 * win.unit
+        text: "Please complete the previous step"
+        color: "#ffffff"
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.WordWrap
+        font.family: "SF Pro Display"
+        font.pixelSize: 28 * win.unit
+        font.weight: Font.Bold
+        style: Text.Outline
+        styleColor: "#99000000"
     }
 
     FlashOverlay {

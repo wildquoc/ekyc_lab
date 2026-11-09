@@ -259,7 +259,7 @@ class EnrollmentSession:
         if not (growth_ok and framed_ok):
             self.stable_start_time = None
             if not growth_ok:
-                return self._reply("Hãy tiến lại gần camera hơn nữa", "yellow", min(1.0, (growth - 1.0) / (C.ZOOM_MIN_GROWTH - 1.0)))
+                return self._reply("Move closer to the camera", "yellow", min(1.0, (growth - 1.0) / (C.ZOOM_MIN_GROWTH - 1.0)))
             return self._reply(v.message, _color_for(v.severity))
 
         elapsed = self._hold_elapsed()
@@ -273,9 +273,9 @@ class EnrollmentSession:
             }
             self._record_timing("zoom")
             self._enter(Stage.FLASHING)
-            return self._reply("Giữ yên khuôn mặt! Chuẩn bị quét ánh sáng màu...", "green", 1.0)
+            return self._reply("Hold on! Color splashings...", "green", 1.0)
         progress = elapsed / C.HOLD_SEC
-        return self._reply("Tuyệt vời! Giữ yên khuôn mặt...", "green", progress)
+        return self._reply("Great! Keep still...", "green", progress)
 
     def _on_flashing(self) -> Dict[str, Any]:
         return self._reply("Scanning light. Look at the screen.", "green", 1.0)

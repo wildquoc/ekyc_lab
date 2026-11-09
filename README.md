@@ -26,7 +26,15 @@ Tài khoản trong `backend/security/accounts.json`:
 
 Trên màn hình đầu, **Log in manually** mở hai ô username và mật khẩu. Đúng tài khoản thì vào Welcome.
 
+<img width="1025" height="694" alt="Screenshot 2026-11-09 132714" src="https://github.com/user-attachments/assets/c2c66cb4-4f30-48a1-95a3-b4e8e6988f80" />
+<img width="1045" height="680" alt="Screenshot 2026-11-09 132741" src="https://github.com/user-attachments/assets/f1a4015c-ad44-4487-a55b-0afea2cb509c" />
+<img width="1049" height="690" alt="Screenshot 2026-11-09 132801" src="https://github.com/user-attachments/assets/7168add3-7216-4a5a-885e-7ce630caee90" />
+<img width="1027" height="676" alt="Screenshot 2026-11-09 132910" src="https://github.com/user-attachments/assets/dcb06d90-adad-4370-9e45-0d3ca7a05151" />
+<img width="1010" height="672" alt="Screenshot 2026-11-09 133020" src="https://github.com/user-attachments/assets/63e8c8e6-98be-4198-9e89-bf4993d3233c" />
+
 **Login with FaceID** chỉ khớp khuôn mặt đã đăng ký trên chính máy đó. Tạm thời máy mới chưa có hồ sơ sẽ không nhận mặt.
+
+<img width="1040" height="682" alt="Screenshot 2026-11-09 133043" src="https://github.com/user-attachments/assets/3567f98c-1cbc-4ebd-9a6a-520b1d82459c" />
 
 ## Đăng ký khuôn mặt
 

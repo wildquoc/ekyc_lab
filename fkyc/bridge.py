@@ -220,6 +220,16 @@ class Bridge(QObject):
             "password": password,
         }, ensure_ascii=False))
 
+    @Slot(str, str, str, str)
+    def submitDetails(self, dob: str, citizen_id: str, full_name: str, student_id: str) -> None:
+        self._submit(json.dumps({
+            "cmd": "profile_details",
+            "dob": dob,
+            "citizenId": citizen_id,
+            "fullName": full_name,
+            "studentId": student_id,
+        }, ensure_ascii=False))
+
     @Slot()
     def captureManual(self) -> None:
         self._submit("capture_manual")

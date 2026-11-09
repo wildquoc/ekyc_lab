@@ -67,7 +67,7 @@ def test_verify_final_capture_success():
     res = sess.verify_final_capture(dummy_frame)
 
     assert res["passed"] is True
-    assert "thành công" in res["message"].lower()
+    assert "passed" in res["message"].lower()
     assert sess.stage == Stage.CAPTURE
     assert sess.enrolled_image_bgr is not None
     assert "final_capture" in sess.history
@@ -121,7 +121,7 @@ def test_verify_final_capture_upside_down_rejected():
 
     assert res["passed"] is False
     assert res["error_type"] == "upside_down"
-    assert "lật ngược" in res["message"].lower()
+    assert "upside down" in res["message"].lower()
     assert sess.stage == Stage.FAILED
 
 
@@ -139,7 +139,7 @@ def test_verify_final_capture_hand_occlusion_rejected():
 
     assert res["passed"] is False
     assert res["error_type"] == "hand_occlusion"
-    assert "bàn tay" in res["message"].lower()
+    assert "hand" in res["message"].lower()
     assert sess.stage == Stage.FAILED
 
 
@@ -187,7 +187,7 @@ def test_verify_final_capture_print_attack_rejected():
 
     assert res["passed"] is False
     assert res["error_type"] == "spoof_detected"
-    assert "ảnh in 2d" in res["message"].lower()
+    assert "printed photo" in res["message"].lower()
     assert sess.stage == Stage.FAILED
 
 
@@ -213,7 +213,7 @@ def test_verify_final_capture_screen_replay_rejected():
 
     assert res["passed"] is False
     assert res["error_type"] == "spoof_detected"
-    assert "màn hình" in res["message"].lower()
+    assert "screen replay" in res["message"].lower()
     assert sess.stage == Stage.FAILED
 
 

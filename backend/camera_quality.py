@@ -104,22 +104,22 @@ class CameraMonitor:
         result = CameraResult(checks=checks, metrics=metrics)
         # Thông báo theo thứ tự ưu tiên
         if not checks["not_black"]:
-            result.message, result.severity = "Camera bị che hoặc khung hình đen – hãy kiểm tra ống kính", "error"
+            result.message, result.severity = "Camera covered or black. Check the lens.", "error"
         elif not checks["not_frozen"]:
-            result.message, result.severity = "Camera bị treo / đóng băng – hãy chọn lại camera", "error"
+            result.message, result.severity = "Camera frozen. Pick another camera.", "error"
         elif not res_known:
-            result.message, result.severity = "Đang đọc độ phân giải camera...", "warn"
+            result.message, result.severity = "Reading camera resolution...", "warn"
         elif not checks["resolution_ok"]:
-            result.message = f"Độ phân giải {stats.width}×{stats.height} thấp hơn {C.MIN_WIDTH}×{C.MIN_HEIGHT} – hãy chọn camera khác"
+            result.message = f"Resolution {stats.width}×{stats.height} is below {C.MIN_WIDTH}×{C.MIN_HEIGHT}. Pick another camera."
             result.severity = "error"
         elif brightness < C.FRAME_BRIGHTNESS[0]:
-            result.message, result.severity = "Khung hình quá tối – hãy bật thêm đèn", "warn"
+            result.message, result.severity = "Frame is too dark. Add light.", "warn"
         elif brightness > C.FRAME_BRIGHTNESS[1]:
-            result.message, result.severity = "Khung hình quá chói – tránh nguồn sáng chiếu thẳng vào camera", "warn"
+            result.message, result.severity = "Frame is too bright. Avoid direct light.", "warn"
         elif not checks["noise_ok"]:
-            result.message, result.severity = "Hình ảnh bị nhiễu hạt – hãy tăng ánh sáng phòng", "warn"
+            result.message, result.severity = "Image is noisy. Add room light.", "warn"
         elif stats.fps and stats.fps < C.MIN_FPS:
-            result.message = f"Camera đạt chuẩn – FPS thấp ({stats.fps:.0f}), nên đóng bớt ứng dụng đang dùng camera/CPU"
+            result.message = f"Camera OK. Low FPS ({stats.fps:.0f}). Close other apps."
         else:
-            result.message, result.severity = "Camera đạt chuẩn – đang xác nhận...", "ok"
+            result.message, result.severity = "Camera OK. Confirming...", "ok"
         return result

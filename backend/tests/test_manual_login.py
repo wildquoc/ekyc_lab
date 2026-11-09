@@ -35,6 +35,29 @@ def test_manual_login_opens_welcome_then_existing_register():
     assert engine._account == "pkq"
 
 
+def test_exception_user_skips_cards_then_enters_details():
+    engine = SessionEngine()
+    _login(engine, "nvt", "190509")
+    begun = engine.submit("start_register")
+    assert begun["screen"] == "face"
+    assert engine._skip_cards is True
+
+    engine.screen = "faceResult"
+    opened = engine.submit("confirm")
+    assert opened["screen"] == "details"
+    assert engine.camera_on is False
+
+    missing = engine.submit(json.dumps({
+        "cmd": "profile_details",
+        "dob": "",
+        "citizenId": "079206000000",
+        "fullName": "NGUYEN VAN A",
+        "studentId": "SE190509",
+    }))
+    assert engine.screen == "details"
+    assert "every field" in missing["errorText"]
+
+
 def test_register_without_manual_login_is_blocked():
     engine = SessionEngine()
     blocked = engine.submit("start_register")

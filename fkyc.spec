@@ -28,6 +28,7 @@ except Exception:
 
 datas += [
     (os.path.join(ROOT, "backend", "security", "accounts.json"), os.path.join("backend", "security")),
+    (os.path.join(ROOT, "backend", "security", "exceptions.json"), os.path.join("backend", "security")),
     (os.path.join(ROOT, "fkyc", "qml"), os.path.join("fkyc", "qml")),
     (os.path.join(ROOT, "fkyc", "assets"), os.path.join("fkyc", "assets")),
     (os.path.join(ROOT, "assets"), "assets"),

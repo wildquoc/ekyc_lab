@@ -200,7 +200,7 @@ class EnrollmentSession:
         if face.yaw is None:
             self.lost_face_counter += 1
             if self.lost_face_counter > C.MAX_LOST_FRAMES:
-                return self._handle_challenge_timeout("Mất dấu khuôn mặt khi quay")
+                return self._handle_challenge_timeout("Face lost while turning")
             return self._reply(self._turn_instruction(), "yellow")
         self.lost_face_counter = 0
 
@@ -220,17 +220,17 @@ class EnrollmentSession:
                 "duration": round(self._now - self.stage_start_time, 2),
             }
             self._enter(Stage.RECENTER)
-            return self._reply("Đã nhận diện! Vui lòng nhìn thẳng lại vào camera", "green", 1.0)
-        return self._reply("Giữ nguyên góc quay đầu...", "green", self.turn_hold_counter / C.TURN_HOLD_FRAMES)
+            return self._reply("Turn seen. Look straight again.", "green", 1.0)
+        return self._reply("Hold this head angle...", "green", self.turn_hold_counter / C.TURN_HOLD_FRAMES)
 
     def _on_recenter(self) -> Dict[str, Any]:
         v, face = self._verdict, self._face
         if not v.continuous_ok:
             return self._reply(v.message, _color_for(v.severity))
         if face.yaw is None:
-            return self._reply("Vui lòng quay đầu nhìn thẳng vào camera", "yellow")
+            return self._reply("Turn back. Look straight.", "yellow")
         if abs(face.yaw) > C.RECENTER_YAW_DEG:
-            return self._reply("Vui lòng nhìn thẳng vào camera để tiếp tục...", "yellow")
+            return self._reply("Look straight to continue...", "yellow")
 
         if self.current_turn_index == 0:
             self.current_turn_index = 1
@@ -239,11 +239,11 @@ class EnrollmentSession:
 
         self.history["timings"]["liveness_total"] = round(self._now - self.created_at, 2)
         self._enter(Stage.ZOOM_IN)
-        return self._reply("Khung Oval đã mở rộng. Vui lòng tiến lại gần camera hơn để vừa khung", "yellow")
+        return self._reply("Oval grew. Move closer to fit.", "yellow")
 
     def _on_zoom(self) -> Dict[str, Any]:
         if self._now - self.stage_start_time > C.ZOOM_TIMEOUT_SEC:
-            return self._handle_challenge_timeout("Quá thời gian tiến gần camera")
+            return self._handle_challenge_timeout("Too slow to move closer")
 
         v, face = self._verdict, self._face
         if not v.continuous_ok:
@@ -278,16 +278,16 @@ class EnrollmentSession:
         return self._reply("Tuyệt vời! Giữ yên khuôn mặt...", "green", progress)
 
     def _on_flashing(self) -> Dict[str, Any]:
-        return self._reply("Đang quét ánh sáng quang học... Hãy nhìn thẳng vào màn hình", "green", 1.0)
+        return self._reply("Scanning light. Look at the screen.", "green", 1.0)
 
     def _on_done(self) -> Dict[str, Any]:
         if self.stage == Stage.FAILED:
             failed_msg = (
                 self.history.get("optical_liveness", {}).get("message")
-                or "Chưa đạt chuẩn phản xạ quang học trên da. Vui lòng thử lại."
+                or "Skin light check failed. Try again."
             )
             return self._reply(failed_msg, "red")
-        return self._reply("Xác thực sinh trắc học thành công! Đang chuyển sang Bước 5...", "green", 1.0)
+        return self._reply("Check passed. Moving to step 5...", "green", 1.0)
 
     # ------------------------------------------------------------------
     # Trợ giúp chuyển trạng thái
@@ -315,16 +315,16 @@ class EnrollmentSession:
             return "Từ từ quay đầu sang Trái"
         if self.stage == Stage.TURN_RIGHT:
             return "Từ từ quay đầu sang Phải"
-        return "Làm theo chỉ dẫn trên màn hình"
+        return "Follow the on-screen guide"
 
     def _handle_challenge_timeout(self, extra: str = "") -> Dict[str, Any]:
         self.attempts += 1
         if self.attempts >= C.MAX_ATTEMPTS:
             self.stage = Stage.FAILED
-            msg = f"Đăng ký không thành công ({extra or 'Quá thời gian thử thách'}). Vui lòng bấm Thử lại từ đầu."
+            msg = f"Enrollment failed ({extra or 'Challenge timed out'}). Tap Try again."
             return self._reply(msg, "red")
         self._enter(Stage.FACE_QUALITY)
-        msg = f"{extra or 'Chưa hoàn thành thử thách'}. Đưa khuôn mặt vào khung Oval để thực hiện lại (lần {self.attempts}/{C.MAX_ATTEMPTS})"
+        msg = f"{extra or 'Challenge not finished'}. Fit your face in the oval and retry ({self.attempts}/{C.MAX_ATTEMPTS})"
         return self._reply(msg, "yellow")
 
     # ------------------------------------------------------------------
@@ -416,7 +416,7 @@ class EnrollmentSession:
             }
             return {
                 "passed": True,
-                "message": "Kiểm định khuôn mặt toàn vẹn & chống giả mạo thành công!",
+                "message": "Face check passed.",
                 "summary": self.history,
                 "metrics": metrics,
             }
@@ -507,46 +507,46 @@ def _face_metrics(face: FaceResult) -> Dict[str, Any]:
 def _final_capture_issue(face: FaceResult) -> Optional[tuple]:
     """Lỗi đầu tiên khiến ảnh chân dung bị từ chối: (error_type, message, details) hoặc None."""
     if not face.detected:
-        return "no_face", "Không phát hiện khuôn mặt khi chụp ảnh chân dung. Vui lòng thử lại từ đầu.", None
+        return "no_face", "No face in the portrait. Start again.", None
     if face.face_count > 1:
-        return "multiple_faces", "Phát hiện nhiều khuôn mặt trong ảnh chân dung. Chỉ một người duy nhất được phép đăng ký.", None
+        return "multiple_faces", "Several faces in the portrait. Only one person.", None
     if face.is_upside_down:
-        return "upside_down", "Khuôn mặt bị lật ngược khi chụp chân dung. Vui lòng giữ thẳng đầu và thử lại từ đầu.", None
+        return "upside_down", "Face is upside down. Hold your head upright and retry.", None
     if face.hand_occlusion:
-        return "hand_occlusion", "Phát hiện bàn tay che mặt khi chụp ảnh. Vui lòng không chạm tay vào mặt và thử lại.", None
+        return "hand_occlusion", "A hand covers the face. Keep hands off and retry.", None
     if face.mask_detected:
-        return "mask_detected", "Phát hiện khẩu trang khi chụp ảnh chân dung. Vui lòng tháo khẩu trang và thử lại từ đầu.", None
+        return "mask_detected", "Mask found. Remove it and start again.", None
     if face.sunglasses_detected:
-        return "sunglasses_detected", "Phát hiện kính râm khi chụp ảnh chân dung. Vui lòng tháo kính râm và thử lại từ đầu.", None
+        return "sunglasses_detected", "Sunglasses found. Remove them and start again.", None
     if face.occluded_part_name:
-        return "feature_occluded", f"Khuôn mặt không toàn vẹn (bị che khuất {face.occluded_part_name}). Vui lòng để lộ toàn bộ khuôn mặt.", None
+        return "feature_occluded", f"Face is covered ({face.occluded_part_name}). Show your whole face.", None
 
     parts = face.parts_status
     if not all(parts.get(k, True) for k in ("left_eye", "right_eye", "nose")):
-        return "features_incomplete", "Ngũ quan khuôn mặt không đầy đủ hoặc bị che cản. Vui lòng thử lại từ đầu.", None
+        return "features_incomplete", "Eyes or nose are covered. Start again.", None
 
     lim = C.FINAL_MAX_POSE
     if face.yaw is not None and abs(face.yaw) > lim["yaw"]:
-        return "bad_pose", "Khuôn mặt quay lệch khi chụp ảnh chân dung. Vui lòng nhìn thẳng vào camera và thử lại.", None
+        return "bad_pose", "Face turned away. Look straight and retry.", None
     if face.pitch is not None and abs(face.pitch) > lim["pitch"]:
-        return "bad_pose", "Khuôn mặt ngẩng quá cao hoặc cúi quá thấp khi chụp. Vui lòng giữ thẳng đầu và thử lại.", None
+        return "bad_pose", "Chin too high or low. Hold your head straight.", None
     if face.roll is not None and abs(face.roll) > lim["roll"]:
-        return "bad_pose", "Đang nghiêng đầu khi chụp ảnh chân dung. Vui lòng giữ thẳng đầu và thử lại.", None
+        return "bad_pose", "Head is tilted. Hold it straight and retry.", None
 
     s = face.anti_spoof
     if s and not s.is_real:
         if s.spoof_type in ("print_attack", "planar_2d"):
-            msg = "Phát hiện ảnh in 2D giả mạo khi chụp chân dung. Yêu cầu người thật trước camera."
+            msg = "Printed photo detected. Use a live face."
         elif s.spoof_type in ("replay_attack", "screen_moire"):
-            msg = "Phát hiện màn hình/video phát lại khi chụp chân dung. Yêu cầu người thật trước camera."
+            msg = "Screen replay detected. Use a live face."
         else:
             msg = s.message
         return "spoof_detected", msg, {"spoof_type": s.spoof_type, "real_prob": round(s.real_prob, 3)}
 
     if face.brightness_mean < C.FACE_BRIGHTNESS_MIN:
-        return "too_dark", "Ảnh chụp chân dung quá tối. Vui lòng tăng sáng và thử lại.", None
+        return "too_dark", "Portrait is too dark. Add light and retry.", None
     if face.brightness_mean > C.FACE_BRIGHTNESS_MAX:
-        return "too_bright", "Ảnh chụp chân dung bị chói sáng. Vui lòng điều chỉnh ánh sáng và thử lại.", None
+        return "too_bright", "Portrait is too bright. Soften the light and retry.", None
     return None
 
 

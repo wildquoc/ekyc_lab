@@ -203,6 +203,7 @@ class SessionEngine:
         }
         self._account = ""
         self._replace_id = ""
+        self._skip_cards = False
         self._services = None
         self._session = None
         self._challenge_mgr = None
@@ -280,13 +281,17 @@ class SessionEngine:
             self.fields["username"] = account
             self.fields["faceReady"] = ready
             self._close_session()
-            begun = self._begin("citizen")
+            from manual_accounts import is_exception_user
+
+            self._skip_cards = is_exception_user(account)
+            begun = self._begin("face" if self._skip_cards else "citizen")
             begun["landingNotice"] = ""
             begun.update(self._mark(fields=dict(self.fields)))
             return begun
         if command == "start_manual":
             self._account = ""
             self._replace_id = ""
+            self._skip_cards = False
             self.fields["username"] = ""
             self.fields["faceReady"] = ""
             self._close_session()
@@ -312,12 +317,15 @@ class SessionEngine:
                     str(payload.get("username") or ""),
                     str(payload.get("password") or ""),
                 )
+            if payload.get("cmd") == "profile_details":
+                return self._profile_details(payload)
         if command == "capture_manual":
             self._force = True
             return {}
         if command == "cancel" or command == "go_home":
             self._account = ""
             self._replace_id = ""
+            self._skip_cards = False
             self.fields["username"] = ""
             self.fields["faceReady"] = ""
             self._close_session()
@@ -447,6 +455,7 @@ class SessionEngine:
             "landing",
             "manualLogin",
             "welcome",
+            "details",
             "loginResult",
             "citizenResult",
             "studentResult",
@@ -856,7 +865,7 @@ class SessionEngine:
         if getattr(C, "FLASH_DEMO_BYPASS", False) and not res.passed:
             res.passed = True
             res.verdict = "LIVENESS_PASS"
-            res.message = "Xác thực phản xạ quang học thành công (Demo Bypass)."
+            res.message = "Light reflection check passed (demo)."
             if res.correlation_score < C.FLASH_MIN_PEARSON:
                 res.correlation_score = float(C.FLASH_MIN_PEARSON)
         self._challenge_mgr.consume_challenge(self._session.session_id)
@@ -875,7 +884,7 @@ class SessionEngine:
         self._capture_sent = True
         result = self._session.verify_final_capture(frame)
         if not result.get("passed"):
-            message = result.get("message") or "Ảnh chân dung chưa đạt."
+            message = result.get("message") or "Portrait not ready."
             return self._mark(errorText=message, prompt=message, ovalColor="red", stage="failed", guides=_guides("capture"))
         self._enrolled_frame = frame.copy()
         self.screen = "faceResult"
@@ -967,8 +976,34 @@ class SessionEngine:
             self._step_started = time.time()
             return self._mark(screen="face", errorText="", captureHint=False, prompt="Đưa khuôn mặt vào khung Oval", stage="camera_check", guides=_guides("camera_check"), progress=0)
         if self.screen == "faceResult":
+            if self._skip_cards:
+                self.camera_on = False
+                return self._mark(
+                    screen="details",
+                    cameraActive=False,
+                    errorText="",
+                    busy=False,
+                    captureHint=False,
+                    flashActive=False,
+                    prompt="Enter your details",
+                )
             return self._save()
         return {}
+
+    def _profile_details(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        if self.screen != "details" or not self._skip_cards:
+            return {}
+        citizen = str(payload.get("citizenId") or "").strip()
+        name = str(payload.get("fullName") or "").strip()
+        dob = str(payload.get("dob") or "").strip()
+        student = str(payload.get("studentId") or "").strip()
+        if not all((citizen, name, dob, student)):
+            return self._mark(errorText="Fill in every field.", screen="details")
+        self.fields["citizenId"] = citizen
+        self.fields["fullName"] = name
+        self.fields["dob"] = dob
+        self.fields["studentId"] = student
+        return self._save()
 
     def _redo(self) -> Dict[str, Any]:
         if self.screen == "loginResult":
@@ -1045,6 +1080,7 @@ class SessionEngine:
         self.camera_on = False
         self._account = ""
         self._replace_id = ""
+        self._skip_cards = False
         self.fields["username"] = ""
         self.fields["faceReady"] = ""
         user_id = saved.get("user_id", "")

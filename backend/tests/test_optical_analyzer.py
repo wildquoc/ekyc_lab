@@ -115,7 +115,7 @@ def test_optical_analyzer_static_print_attack_fails():
 
     assert res.passed is False
     assert res.verdict == "STATIC_SPOOF_REPLAY"
-    assert "ảnh in hoặc màn hình tĩnh" in res.message
+    assert "print or still screen" in res.message
 
 
 def test_optical_analyzer_video_replay_mismatch_fails():

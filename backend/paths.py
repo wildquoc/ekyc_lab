@@ -42,6 +42,15 @@ def accounts_file() -> Path:
     return resource_root() / "backend" / "security" / "accounts.json"
 
 
+def exceptions_file() -> Path:
+    """Username bỏ qua quét thẻ, nhập thông tin sau khi đăng ký mặt."""
+    if frozen():
+        beside = Path(sys.executable).resolve().parent / "security" / "exceptions.json"
+        if beside.is_file():
+            return beside
+    return resource_root() / "backend" / "security" / "exceptions.json"
+
+
 def data_dir() -> Path:
     """SQLite + chân dung: cạnh source khi dev, %LOCALAPPDATA%\\FKYC khi đóng gói."""
     if frozen():

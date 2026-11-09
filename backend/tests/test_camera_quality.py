@@ -18,7 +18,7 @@ def test_black_frame_detection():
     res = monitor.evaluate(black_img, stats)
     assert not res.checks["not_black"]
     assert res.severity == "error"
-    assert "bị che" in res.message or "đen" in res.message
+    assert "covered" in res.message or "black" in res.message
 
 
 def test_frozen_frame_detection():
@@ -33,7 +33,7 @@ def test_frozen_frame_detection():
 
     assert not res.checks["not_frozen"]
     assert res.severity == "error"
-    assert "đóng băng" in res.message or "treo" in res.message
+    assert "frozen" in res.message
 
 
 def test_browser_reported_frozen():

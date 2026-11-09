@@ -152,7 +152,7 @@ def test_turn_timeout_returns_to_fqa_then_fails():
         res = sess.process_frame(frame, stats)
         if attempt < C.MAX_ATTEMPTS:
             assert sess.stage == Stage.FACE_QUALITY
-            assert f"lần {attempt}/{C.MAX_ATTEMPTS}" in res["message"]
+            assert f"({attempt}/{C.MAX_ATTEMPTS})" in res["message"]
         else:
             assert sess.stage == Stage.FAILED
             assert res["color"] == "red"
@@ -223,7 +223,7 @@ def test_part_occlusion_rejection():
                     "left_eyebrow": True, "right_eyebrow": True,
                     "nose": False,
                 },
-                occluded_part_name="Vùng Mũi",
+                occluded_part_name="Nose",
                 keypoints={
                     "mouth": [[0.4, 0.6], [0.6, 0.6]],
                     "nose": [[0.5, 0.4], [0.5, 0.5]],
@@ -240,8 +240,8 @@ def test_part_occlusion_rejection():
     assert res["face_checks"]["has_eyes"] is True
     assert "has_mouth" not in res["face_checks"]
     assert res["color"] == "red"
-    assert "che khuất vùng mũi" in res["message"].lower()
-    assert res["occluded_part_name"] == "Vùng Mũi"
+    assert "covered: nose" in res["message"].lower()
+    assert res["occluded_part_name"] == "Nose"
     assert res["parts_status"]["nose"] is False
     assert "mouth" in res["keypoints"]
     assert res["progress"] == 0.0

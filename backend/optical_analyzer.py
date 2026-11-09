@@ -233,7 +233,7 @@ class OpticalAnalyzer:
                 correlation_score=0.0,
                 amplitude=0.0,
                 verdict="INVALID_SEQUENCE_LENGTH",
-                message="Số lượng khung hình không khớp với chuỗi thách thức màu.",
+                message="Frame count does not match the color sequence.",
             )
 
         skin_rgbs: List[np.ndarray] = []
@@ -254,7 +254,7 @@ class OpticalAnalyzer:
                     correlation_score=0.0,
                     amplitude=0.0,
                     verdict="FACE_LOST",
-                    message="Không tìm thấy khuôn mặt trong suốt quá trình quét ánh sáng.",
+                    message="No face during the light scan.",
                     details={"failed_frame_index": i},
                 )
             skin_rgbs.append(skin_rgb)
@@ -330,7 +330,7 @@ class OpticalAnalyzer:
                 correlation_score=r_best,
                 amplitude=effective_amplitude,
                 verdict="STATIC_SPOOF_REPLAY",
-                message="Xác thực thất bại. Bề mặt không có phản xạ ánh sáng (ảnh in hoặc màn hình tĩnh).",
+                message="Check failed. No light reflection (print or still screen).",
                 details=details,
             )
 
@@ -342,7 +342,7 @@ class OpticalAnalyzer:
                 correlation_score=r_best,
                 amplitude=effective_amplitude,
                 verdict="OPTICAL_MISMATCH_SPOOF",
-                message="Xác thực thất bại. Phản xạ quang phổ không khớp với chuỗi màu thách thức.",
+                message="Check failed. Reflection does not match the colors.",
                 details=details,
             )
 
@@ -351,6 +351,6 @@ class OpticalAnalyzer:
             correlation_score=r_best,
             amplitude=effective_amplitude,
             verdict="LIVENESS_PASS",
-            message="Xác thực phản xạ quang học thành công.",
+            message="Light reflection check passed.",
             details=details,
         )

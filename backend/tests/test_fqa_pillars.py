@@ -200,11 +200,11 @@ def test_pillar_4_occlusion():
     # Che mắt -> Báo Đỏ
     face_eyes = create_valid_face()
     face_eyes.parts_status["left_eye"] = False
-    face_eyes.occluded_part_name = "mắt trái"
+    face_eyes.occluded_part_name = "Left eye"
     checks, msg, sev = quality_checks(face_eyes)
     assert checks["has_eyes"] is False
     assert sev == "error"
-    assert "che khuất" in msg.lower()
+    assert "covered" in msg.lower()
 
     # Khẩu trang -> Báo Đỏ (vùng miệng không còn được kiểm tra riêng)
     face_mouth = create_valid_face()

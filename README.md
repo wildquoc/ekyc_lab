@@ -35,6 +35,8 @@ Trên màn hình đầu, **Log in manually** mở hai ô username và mật kh�
 3. Quét căn cước, rồi thẻ sinh viên, rồi khuôn mặt.
 4. Bấm Confirm. Hồ sơ gắn với username vừa đăng nhập.
 
+Username trong `backend/security/exceptions.json` (hiện có **nvt**) bỏ qua căn cước và thẻ sinh viên, đăng ký mặt trước, rồi nhập Date of Birth, Citizen ID, Name và Student ID.
+
 Ảnh mặt và database nằm ở `backend/data/`, không có trên GitHub. Đăng ký trên máy nào thì chỉ máy đó đăng nhập được bằng mặt. Đăng ký lại cùng username sẽ ghi đè hồ sơ cũ của username đó trên máy này.
 
 ## Đóng gói

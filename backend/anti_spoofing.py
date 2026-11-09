@@ -197,21 +197,21 @@ class AntiSpoofDetector:
 
         if not res.model_ran and C.ANTISPOOF_REQUIRE_MODEL:
             return verdict(False, "model_unavailable", "error",
-                           "Không chạy được mô hình chống giả mạo MiniFASNet – Kiểm tra file backend/models/minifasnet_v2.onnx")
+                           "MiniFASNet failed. Check backend/models/minifasnet_v2.onnx")
         if res.print_prob >= C.ANTISPOOF_PRINT_THRESH:
-            return verdict(False, "print_attack", "error", "Phát hiện ảnh in\nVui lòng không đưa ảnh in trước camera")
+            return verdict(False, "print_attack", "error", "Printed photo.\nDon't hold a print up.")
         if res.replay_prob >= C.ANTISPOOF_REPLAY_THRESH:
             return verdict(False, "replay_attack", "error",
-                           "Phát hiện màn hình\nVui lòng không giơ điện thoại trước camera")
+                           "Screen found.\nDon't hold a phone up.")
         bezel = C.ANTISPOOF_USE_BEZEL and res.bezel_detected
         if C.ANTISPOOF_USE_MOIRE and res.screen_detected and (bezel or res.replay_prob >= 0.35):
-            return verdict(False, "screen_moire", "error", "Phát hiện màn hình\nVui lòng không giơ điện thoại trước camera")
+            return verdict(False, "screen_moire", "error", "Screen found.\nDon't hold a phone up.")
         if C.ANTISPOOF_USE_DEPTH and not res.depth_3d_ok and (res.print_prob >= 0.30 or res.real_prob < 0.70):
             return verdict(False, "planar_2d", "error",
-                           "Phát hiện ảnh in\nVui lòng không đưa ảnh in trước camera")
+                           "Printed photo.\nDon't hold a print up.")
         if res.real_prob >= C.ANTISPOOF_REAL_THRESH or not res.model_ran:
-            return verdict(True, "real", "ok", "Khuôn mặt người thật hợp lệ")
-        return verdict(False, "suspect", "warn", "Đang kiểm tra bảo mật chống giả mạo sinh trắc...")
+            return verdict(True, "real", "ok", "Live face accepted")
+        return verdict(False, "suspect", "warn", "Checking liveness...")
 
     def evaluate(self, frame_bgr: np.ndarray, bbox, landmarks_3d: Optional[np.ndarray] = None) -> AntiSpoofResult:
         """Đo và quyết định trên một frame duy nhất (không làm mượt)."""

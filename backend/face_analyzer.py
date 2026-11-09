@@ -36,31 +36,31 @@ _EYE_FALLBACK = [159, 386]              # mí trên nếu không có iris
 PARTS_CONFIG = {
     "left_eye": {
         "indices": [33, 160, 158, 133, 153, 144],
-        "name": "Mắt trái",
+        "name": "Left eye",
         "min_edge": 2.5,
         "min_contrast": 16.0,
     },
     "right_eye": {
         "indices": [362, 385, 387, 263, 373, 380],
-        "name": "Mắt phải",
+        "name": "Right eye",
         "min_edge": 2.5,
         "min_contrast": 16.0,
     },
     "left_eyebrow": {
         "indices": [70, 63, 105, 66, 107],
-        "name": "Chân mày trái",
+        "name": "Left brow",
         "min_edge": 1.2,
         "min_contrast": 14.0,
     },
     "right_eyebrow": {
         "indices": [336, 296, 334, 293, 300],
-        "name": "Chân mày phải",
+        "name": "Right brow",
         "min_edge": 1.2,
         "min_contrast": 14.0,
     },
     "nose": {
         "indices": [1, 2, 98, 327, 168],
-        "name": "Vùng Mũi",
+        "name": "Nose",
         "min_edge": 0.8,
         "min_contrast": 8.0,
     },
@@ -584,10 +584,10 @@ def _continuous_issue(face: Optional[FaceResult], is_turning: bool) -> Issue:
         return "Vui lòng bỏ tay ra khỏi khuôn mặt", "error"
     if face.occluded_part_name:
         # Khi đang quay đầu (is_turning=True), góc nghiêng 3D làm biến dạng/thu hẹp hình chiếu phối cảnh của mũi
-        if is_turning and face.occluded_part_name == "Vùng Mũi":
+        if is_turning and face.occluded_part_name == "Nose":
             pass
         else:
-            return f"Phát hiện che khuất {face.occluded_part_name} – Vui lòng để lộ toàn bộ khuôn mặt", "error"
+            return f"Covered: {face.occluded_part_name}. Show your whole face.", "error"
     if face.mask_detected:
         return "Vui lòng tháo khẩu trang để tiếp tục", "error"
     if face.sunglasses_detected:

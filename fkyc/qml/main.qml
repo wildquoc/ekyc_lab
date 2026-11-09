@@ -65,7 +65,7 @@ ApplicationWindow {
     CameraViewport {
         id: cameraViewport
         z: 4
-        visible: bridge.screen !== "landing" && bridge.screen !== "manualLogin" && bridge.screen !== "welcome"
+        visible: bridge.screen !== "landing" && bridge.screen !== "manualLogin" && bridge.screen !== "welcome" && bridge.screen !== "details"
         unit: win.unit
         blurSource: campus
         x: win.cameraX
@@ -91,7 +91,7 @@ ApplicationWindow {
 
     PillButton {
         z: 5
-        visible: bridge.screen === "login" || bridge.screen === "citizen" || bridge.screen === "student" || bridge.screen === "face" || bridge.screen === "exam" || bridge.screen === "manualLogin" || bridge.screen === "welcome"
+        visible: bridge.screen === "login" || bridge.screen === "citizen" || bridge.screen === "student" || bridge.screen === "face" || bridge.screen === "exam" || bridge.screen === "manualLogin" || bridge.screen === "welcome" || bridge.screen === "details"
         width: 58 * win.unit
         height: 58 * win.unit
         x: win.ox + Theme.cardX * win.unit - 74 * win.unit
@@ -143,6 +143,10 @@ ApplicationWindow {
         id: welcomePage
         WelcomePage { unit: win.unit; ox: win.ox; oy: win.oy; blurSource: campus }
     }
+    Component {
+        id: detailsPage
+        DetailsPage { unit: win.unit; ox: win.ox; oy: win.oy; blurSource: campus }
+    }
 
     function pageFor(screen) {
         if (screen === "landing")
@@ -151,6 +155,8 @@ ApplicationWindow {
             return manualPage
         if (screen === "welcome")
             return welcomePage
+        if (screen === "details")
+            return detailsPage
         if (screen === "face")
             return facePage
         if (screen === "exam")

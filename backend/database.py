@@ -495,7 +495,7 @@ class UserRepository:
         if not rows:
             return {
                 "is_match": False,
-                "message": "Cơ sở dữ liệu người dùng đang trống. Chưa có hồ sơ đăng ký nào.",
+                "message": "No registered face profiles yet.",
                 "similarity": 0.0,
                 "distance": 2.0,
                 "confidence_pct": 0.0,

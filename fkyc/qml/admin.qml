@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Window
+import Qt5Compat.GraphicalEffects
 import Fkyc 1.0
 import "components"
 import "pages"
@@ -37,6 +38,10 @@ ApplicationWindow {
     readonly property real cameraY: camY0 + (48 + Theme.loginCamDrop) * win.unit
     readonly property real cameraW: faceCamW
     readonly property real cameraH: faceCamH
+
+    Item {
+        id: world
+        anchors.fill: parent
 
     CampusBackground {
         id: campus
@@ -99,6 +104,137 @@ ApplicationWindow {
 
     FlashOverlay { z: 6 }
 
+    }
+
+    Item {
+        id: confirm
+        z: 40
+        visible: false
+        anchors.fill: parent
+
+        function open() { confirm.visible = true }
+        function close() { confirm.visible = false }
+        function accept() {
+            var page = stack.currentItem
+            confirm.close()
+            if (page && page.acceptAsk)
+                page.acceptAsk()
+        }
+        function dismiss() {
+            var page = stack.currentItem
+            if (page) {
+                page.askAction = ""
+                page.askUser = ""
+            }
+            confirm.close()
+        }
+
+        readonly property real boxW: 460 * win.unit
+        readonly property real boxH: 230 * win.unit
+        readonly property real blurPad: 72
+
+        ShaderEffectSource {
+            id: sceneGrab
+            visible: false
+            live: confirm.visible
+            hideSource: false
+            smooth: true
+            width: askCard.width + confirm.blurPad * 2
+            height: askCard.height + confirm.blurPad * 2
+            sourceItem: world
+            sourceRect: {
+                var origin = askCard.mapToItem(world, -confirm.blurPad, -confirm.blurPad)
+                return Qt.rect(origin.x, origin.y, askCard.width + confirm.blurPad * 2, askCard.height + confirm.blurPad * 2)
+            }
+        }
+
+        Item {
+            id: askCard
+            width: confirm.boxW
+            height: confirm.boxH
+            x: win.ox + (Theme.cardX + Theme.cardW / 2) * win.unit - width / 2
+            y: win.oy + (Theme.cardY + Theme.cardH / 2) * win.unit - height / 2
+
+            Item {
+                id: blurPlate
+                anchors.fill: parent
+                clip: true
+                visible: false
+                layer.enabled: true
+
+                FastBlur {
+                    x: -confirm.blurPad
+                    y: -confirm.blurPad
+                    width: askCard.width + confirm.blurPad * 2
+                    height: askCard.height + confirm.blurPad * 2
+                    source: sceneGrab
+                    radius: 64
+                    transparentBorder: false
+                }
+            }
+
+            Rectangle {
+                id: roundMask
+                anchors.fill: parent
+                radius: 32 * win.unit
+                visible: false
+                layer.enabled: true
+            }
+
+            OpacityMask {
+                anchors.fill: parent
+                source: blurPlate
+                maskSource: roundMask
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 32 * win.unit
+                color: "transparent"
+                border.width: 1
+                border.color: Qt.rgba(1, 1, 1, 0.55)
+            }
+
+            MouseArea { anchors.fill: parent }
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 52 * win.unit
+                text: "Are you sure?"
+                color: "#ffffff"
+                font.family: "SF Pro Display"
+                font.pixelSize: 32 * win.unit
+                font.weight: Font.Bold
+            }
+
+            PillButton {
+                x: 36 * win.unit
+                y: parent.height - 84 * win.unit
+                width: (parent.width - 88 * win.unit) / 2
+                height: 52 * win.unit
+                frosted: true
+                blurSource: campus
+                label: "Yes"
+                labelSize: 22 * win.unit
+                textFont: "SF Pro Display"
+                onClicked: confirm.accept()
+            }
+
+            PillButton {
+                x: parent.width / 2 + 8 * win.unit
+                y: parent.height - 84 * win.unit
+                width: (parent.width - 88 * win.unit) / 2
+                height: 52 * win.unit
+                frosted: true
+                blurSource: campus
+                label: "Cancel"
+                labelSize: 22 * win.unit
+                textFont: "SF Pro Display"
+                onClicked: confirm.dismiss()
+            }
+        }
+    }
+
     Component {
         id: landingPage
         LandingPage {
@@ -120,7 +256,17 @@ ApplicationWindow {
     }
     Component {
         id: usersPage
-        UsersPage { unit: win.unit; ox: win.ox; oy: win.oy; blurSource: campus }
+        UsersPage {
+            unit: win.unit
+            ox: win.ox
+            oy: win.oy
+            blurSource: campus
+            onConfirmRequested: confirm.open()
+            onAskActionChanged: {
+                if (askAction === "")
+                    confirm.close()
+            }
+        }
     }
 
     function pageFor(screen) {
@@ -136,6 +282,7 @@ ApplicationWindow {
     Connections {
         target: bridge
         function onScreenChanged() {
+            confirm.close()
             if (bridge.screen === "welcome" || bridge.screen === "loginResult") {
                 bridge.enterAdmin()
                 return

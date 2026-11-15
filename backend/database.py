@@ -154,6 +154,26 @@ def _get_connection() -> sqlite3.Connection:
     return conn
 
 
+def erase_face(username: str) -> str:
+    """Xóa hồ sơ khuôn mặt gắn với username. Tài khoản đăng nhập vẫn giữ."""
+    uid = face_user_id(username)
+    if not uid:
+        return "No FaceID to erase."
+    with _db_lock:
+        conn = _get_connection()
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM users WHERE user_id = ?", (uid,))
+            affected = cur.rowcount
+            conn.commit()
+        finally:
+            conn.close()
+    if affected:
+        _delete_portrait_file(uid)
+        return ""
+    return "No FaceID to erase."
+
+
 def face_user_id(username: str) -> str:
     """user_id của hồ sơ khuôn mặt đã gắn với username, hoặc chuỗi rỗng."""
     key = (username or "").strip().lower()

@@ -277,9 +277,17 @@ class Bridge(QObject):
 
     @Slot(result=str)
     def accountList(self) -> str:
+        from database import face_user_id
         from manual_accounts import load_manual_accounts
 
-        rows = [{"username": username, "password": password} for username, password in load_manual_accounts()]
+        rows = [
+            {
+                "username": username,
+                "password": password,
+                "faceReady": bool(face_user_id(username)),
+            }
+            for username, password in load_manual_accounts()
+        ]
         return json.dumps(rows, ensure_ascii=False)
 
     @Slot(str, str, str, result=str)
@@ -293,6 +301,12 @@ class Bridge(QObject):
         from manual_accounts import delete_account
 
         return delete_account(username)
+
+    @Slot(str, result=str)
+    def eraseFace(self, username: str) -> str:
+        from database import erase_face
+
+        return erase_face(username)
 
     @Slot(float, float, float, float)
     def setOval(self, x: float, y: float, w: float, h: float) -> None:

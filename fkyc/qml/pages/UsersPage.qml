@@ -18,8 +18,16 @@ Item {
 
     property bool formOpen: false
     property string originalName: ""
-    property string confirmName: ""
     property string formError: ""
+    property string askAction: ""
+    property string askUser: ""
+    signal confirmRequested()
+
+    function openAsk(action, user) {
+        page.askUser = user
+        page.askAction = action
+        page.confirmRequested()
+    }
 
     ListModel { id: users }
 
@@ -33,7 +41,7 @@ Item {
     function openAdd() {
         page.originalName = ""
         page.formError = ""
-        page.confirmName = ""
+        page.askAction = ""
         userField.text = ""
         passField.text = ""
         page.formOpen = true
@@ -43,7 +51,7 @@ Item {
     function openEdit(username, password) {
         page.originalName = username
         page.formError = ""
-        page.confirmName = ""
+        page.askAction = ""
         userField.text = username
         passField.text = password
         page.formOpen = true
@@ -53,9 +61,30 @@ Item {
     function closeForm() {
         page.formOpen = false
         page.formError = ""
+        page.askAction = ""
+    }
+
+    function acceptAsk() {
+        var err = ""
+        if (page.askAction === "delete")
+            err = bridge.deleteAccount(page.askUser)
+        else if (page.askAction === "erase")
+            err = bridge.eraseFace(page.askUser)
+        page.askAction = ""
+        page.askUser = ""
+        if (err) {
+            page.formError = err
+            return
+        }
+        page.formError = ""
+        page.reload()
     }
 
     Component.onCompleted: reload()
+
+    Item {
+        id: sheet
+        anchors.fill: parent
 
     Text {
         x: page.x0
@@ -103,6 +132,7 @@ Item {
                 delegate: Rectangle {
                     required property string username
                     required property string password
+                    required property bool faceReady
                     width: column.width
                     height: 72 * page.unit
                     radius: height / 2
@@ -113,7 +143,7 @@ Item {
                     Text {
                         x: 28 * page.unit
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width * 0.42
+                        width: parent.width * 0.26
                         text: username
                         color: "#ffffff"
                         elide: Text.ElideRight
@@ -123,9 +153,9 @@ Item {
                     }
 
                     Text {
-                        x: parent.width * 0.40
+                        x: parent.width * 0.30
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width * 0.24
+                        width: parent.width * 0.16
                         text: password
                         color: Qt.rgba(1, 1, 1, 0.72)
                         elide: Text.ElideRight
@@ -133,7 +163,29 @@ Item {
                         font.pixelSize: 20 * page.unit
                     }
 
+                    Rectangle {
+                        anchors.right: editButton.left
+                        anchors.rightMargin: 12 * page.unit
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 168 * page.unit
+                        height: 40 * page.unit
+                        radius: height / 2
+                        color: faceReady ? "#10b981" : "transparent"
+                        border.width: faceReady ? 0 : 1
+                        border.color: Qt.rgba(1, 1, 1, 0.4)
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: faceReady ? "FaceID" : "Not Registered"
+                            color: "#ffffff"
+                            font.family: "SF Pro Display"
+                            font.pixelSize: 15 * page.unit
+                            font.weight: Font.Bold
+                        }
+                    }
+
                     PillButton {
+                        id: editButton
                         anchors.right: delButton.left
                         anchors.rightMargin: 10 * page.unit
                         anchors.verticalCenter: parent.verticalCenter
@@ -156,21 +208,12 @@ Item {
                         height: 44 * page.unit
                         frosted: true
                         blurSource: page.blurSource
-                        label: page.confirmName === username ? "Confirm" : "Delete"
+                        label: "Delete"
                         labelSize: 18 * page.unit
                         textFont: "SF Pro Display"
                         onClicked: {
-                            if (page.confirmName !== username) {
-                                page.confirmName = username
-                                page.formError = ""
-                                return
-                            }
-                            var err = bridge.deleteAccount(username)
-                            page.confirmName = ""
-                            if (err)
-                                page.formError = err
-                            else
-                                page.reload()
+                            page.formError = ""
+                            page.openAsk("delete", username)
                         }
                     }
                 }
@@ -267,10 +310,28 @@ Item {
         hint: "Password"
     }
 
+    PillButton {
+        id: eraseButton
+        visible: page.formOpen && page.originalName !== ""
+        x: userField.x
+        y: passField.y + 84 * page.unit
+        width: userField.width
+        height: 56 * page.unit
+        frosted: true
+        blurSource: page.blurSource
+        label: "Erase FaceID"
+        labelSize: 22 * page.unit
+        textFont: "SF Pro Display"
+        onClicked: {
+            page.formError = ""
+            page.openAsk("erase", page.originalName)
+        }
+    }
+
     Text {
         visible: page.formOpen && page.formError !== ""
         x: userField.x
-        y: passField.y + 80 * page.unit
+        y: (page.originalName !== "" ? eraseButton.y + eraseButton.height + 12 * page.unit : passField.y + 80 * page.unit)
         width: userField.width
         text: page.formError
         color: "#ffffff"
@@ -283,7 +344,7 @@ Item {
     PillButton {
         visible: page.formOpen
         x: userField.x
-        y: passField.y + 130 * page.unit
+        y: passField.y + (page.originalName !== "" ? 210 : 130) * page.unit
         width: (userField.width - 16 * page.unit) / 2
         height: 56 * page.unit
         frosted: true
@@ -305,7 +366,7 @@ Item {
     PillButton {
         visible: page.formOpen
         x: userField.x + (userField.width + 16 * page.unit) / 2
-        y: passField.y + 130 * page.unit
+        y: passField.y + (page.originalName !== "" ? 210 : 130) * page.unit
         width: (userField.width - 16 * page.unit) / 2
         height: 56 * page.unit
         frosted: true
@@ -314,5 +375,7 @@ Item {
         labelSize: 22 * page.unit
         textFont: "SF Pro Display"
         onClicked: page.closeForm()
+    }
+
     }
 }

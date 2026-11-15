@@ -259,6 +259,8 @@ def _looks_like_name(text: str) -> bool:
         return False
     if fold(words[0]) not in _FAMILY_NAMES:
         return False
+    if _adjacent_repeat(words):
+        return False
     if not _is_incomplete_name(cleaned) and not _known_given(words[-1]):
         return False
     return True
@@ -387,6 +389,12 @@ def _name_words(text: str) -> List[str]:
     return words
 
 
+def _adjacent_repeat(words: List[str]) -> bool:
+    """Hai hoặc ba tiếng giống nhau đứng liền — OCR nhân đôi, không phải họ tên."""
+    folded = [fold(word) for word in words if word]
+    return any(left == right for left, right in zip(folded, folded[1:]))
+
+
 def _is_incomplete_name(name: Optional[str]) -> bool:
     """Họ + Thị/Văn chưa có tên gọi — chưa chốt. Hai tiếng khác vẫn hiện HUD, ưu tiên đủ 3."""
     if not name:
@@ -419,6 +427,8 @@ def _name_score(name: str) -> float:
             return -1.0
     if fold(parts[0]) not in _FAMILY_NAMES:
         return -1.0
+    if _adjacent_repeat(parts):
+        return -1.0
     if _is_incomplete_name(name):
         return 2.0
     if not _known_given(parts[-1]):
@@ -441,6 +451,8 @@ def pretty_name(text: str) -> Optional[str]:
     """Họ tên: lấy các tiếng đầu (họ→đệm→tên), cắt trước Sex/Ngày sinh."""
     words = _name_words(text)
     if len(words) < 2:
+        return None
+    if _adjacent_repeat(words):
         return None
     if _is_address_text(" ".join(words)):
         return None
@@ -467,8 +479,23 @@ def _is_name_prefix(short: List[str], long: List[str]) -> bool:
     return _folded_parts(long)[: len(short)] == _folded_parts(short)
 
 
+def name_of_count(text: str, count: int) -> Optional[str]:
+    """Chỉ nhận họ tên khi đúng số tiếng đã đếm trên dòng. Không rút bớt, không thêm."""
+    if count < 2 or count > 5:
+        return None
+    words = _name_words(text)
+    if len(words) != count or _adjacent_repeat(words):
+        return None
+    cand = plain_name(" ".join(words)).upper()
+    if _is_address_text(cand) or _name_score(cand) < 0:
+        return None
+    return cand
+
+
 def _extend_name(base: List[str], extra: List[str]) -> List[str]:
     """Ghép mảnh OCR: 'NGUYEN VAN' + 'AN' → đủ họ-đệm-tên. Không đổi sang người khác."""
+    if _adjacent_repeat(extra):
+        return base
     extra = [w for w in extra if _vn_name_syllable(w) and fold(w) not in _NAME_STOP]
     if not extra:
         return base
@@ -548,6 +575,8 @@ def pick_name(*texts: str) -> Optional[str]:
                     best, best_score = cand, score
     if best:
         return best
+    if _adjacent_repeat(collected):
+        return None
     if (
         len(collected) >= 2
         and fold(collected[0]) in _FAMILY_NAMES
@@ -580,6 +609,8 @@ def draft_person_name(name: Optional[str]) -> Optional[str]:
     if cand:
         return cand
     words = _name_words(name)
+    if _adjacent_repeat(words):
+        return None
     if len(words) >= 2 and fold(words[0]) in _FAMILY_NAMES:
         draft = plain_name(" ".join(words[: min(5, len(words))])).upper()
         if _is_address_text(draft):
@@ -1391,6 +1422,19 @@ def word_crops(img_bgr: np.ndarray, max_words: int = 6) -> List[np.ndarray]:
     return crops
 
 
+def locked_name_line(img_bgr: np.ndarray) -> Tuple[Optional[np.ndarray], int]:
+    """Đếm tiếng trên dòng họ tên trước khi đọc chữ. Dòng giá trị là dòng cuối có 2–5 tiếng."""
+    strips = tight_line_crops(img_bgr, max_lines=3)
+    chosen: Optional[np.ndarray] = None
+    count = 0
+    for strip in strips:
+        found = len(word_crops(strip, max_words=6))
+        if 2 <= found <= 5:
+            chosen = strip
+            count = found
+    return chosen, count
+
+
 def prepare_ocr_line(img_bgr: Optional[np.ndarray]) -> Optional[np.ndarray]:
     """Pad nhẹ, ít CLAHE — giữ nét chữ, không làm méo hàng."""
     if img_bgr is None or img_bgr.size == 0:
@@ -1766,10 +1810,38 @@ class IdCardOCREngine:
         except TypeError:
             return self.read_lines(img_bgr)
 
+    def _read_locked_name(self, line: np.ndarray, count: int) -> str:
+        """Đã khóa số tiếng. Chỉ trả về khi đọc đúng bấy nhiêu tiếng, không đoán thêm."""
+        enhanced = prepare_ocr_line(line)
+        if enhanced is not None and enhanced.size:
+            text = self._onnx.predict(enhanced, max_len=28, max_width=800)
+            locked = name_of_count(text or "", count)
+            if locked:
+                return locked
+        blobs = word_crops(line, max_words=count)
+        if len(blobs) != count:
+            return ""
+        bits: List[str] = []
+        for blob in blobs:
+            piece = prepare_ocr_line(blob)
+            if piece is None or piece.size == 0:
+                return ""
+            token = (self._onnx.predict(piece, max_len=12, max_width=220) or "").strip()
+            first = token.split()[0] if token else ""
+            if not first or not _vn_name_syllable(first) or _is_name_junk(first):
+                return ""
+            bits.append(first)
+        if len(bits) != count or _adjacent_repeat(bits):
+            return ""
+        return name_of_count(" ".join(bits), count) or ""
+
     def _ocr_name_crop(self, crop: Optional[np.ndarray]) -> str:
-        """Đọc cả dòng trước. Chỉ tách từng tiếng khi dòng đó chưa đủ họ tên."""
+        """Khóa số tiếng trên dòng họ tên, rồi mới đọc chữ. Không rút thành tên khác."""
         if crop is None or crop.size == 0:
             return ""
+        line, count = locked_name_line(crop)
+        if line is not None and count:
+            return self._read_locked_name(line, count)
         quick: List[str] = []
         for strip in tight_line_crops(crop, max_lines=2):
             if not _ink_enough(strip):
@@ -1780,39 +1852,7 @@ class IdCardOCREngine:
             text = self._onnx.predict(enhanced, max_len=28, max_width=800)
             if text:
                 quick.append(text)
-        joined = "\n".join(quick)
-        if valid_person_name(joined):
-            return joined
-        parts: List[str] = []
-        for strip in tight_line_crops(crop, max_lines=2):
-            if not _ink_enough(strip):
-                continue
-            blobs = word_crops(strip)
-            if len(blobs) >= 2:
-                bits: List[str] = []
-                for blob in blobs[:4]:
-                    piece = prepare_ocr_line(blob)
-                    if piece is None or piece.size == 0:
-                        continue
-                    token = (self._onnx.predict(piece, max_len=12, max_width=220) or "").strip()
-                    first = token.split()[0] if token else ""
-                    if not first or not _vn_name_syllable(first) or _is_name_junk(first):
-                        if bits:
-                            break
-                        continue
-                    bits.append(first)
-                if bits:
-                    parts.append(" ".join(bits))
-                    if valid_person_name("\n".join(parts)):
-                        return "\n".join(parts)
-                    continue
-            enhanced = prepare_ocr_line(strip)
-            if enhanced is None or enhanced.size == 0:
-                continue
-            text = self._onnx.predict(enhanced, max_len=28, max_width=800)
-            if text:
-                parts.append(text)
-        return "\n".join(parts)
+        return "\n".join(quick)
 
     def _ocr_sex_crop(self, crop: Optional[np.ndarray]) -> str:
         """Đọc cả ô trước. Chỉ tách từng tiếng khi chưa ra Nam hoặc Nữ."""

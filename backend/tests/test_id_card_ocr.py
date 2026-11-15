@@ -349,6 +349,31 @@ def test_name_lists_reject_unknown_surname_and_given():
     assert valid_person_name("TRAN THI BICH NGOC") == "TRAN THI BICH NGOC"
 
 
+def test_name_locks_word_count_and_rejects_repeated_syllables():
+    from id_card_ocr import locked_name_line, name_of_count, pick_name, pretty_name
+
+    assert name_of_count("NGUYEN VAN AN", 3) == "NGUYEN VAN AN"
+    assert name_of_count("NGUYEN VAN AN", 2) is None
+    assert name_of_count("NGUYEN VAN AN", 4) is None
+    assert name_of_count("NGUYEN VAN AN AN", 4) is None
+    assert name_of_count("NGUYEN NGUYEN VAN AN", 4) is None
+    assert pretty_name("NGUYEN VAN AN AN") is None
+    assert pretty_name("NGUYEN NGUYEN VAN") is None
+    assert pretty_name("LE MINH MINH MINH") is None
+    assert pretty_name("NGUYEN VAN AN") == "NGUYEN VAN AN"
+    assert pick_name("NGUYEN VAN AN AN") is None
+    assert pick_name("NGUYEN VAN", "AN AN") == "NGUYEN VAN"
+
+    image = np.full((48, 420, 3), 255, np.uint8)
+    for x in (12, 120, 230, 340):
+        cv2.rectangle(image, (x, 8), (x + 68, 40), (0, 0, 0), thickness=-1)
+    _line, count = locked_name_line(image)
+    assert count == 4
+    three = image[:, :310]
+    _line, count = locked_name_line(three)
+    assert count == 3
+
+
 def test_pretty_name_strips_label_prefix():
     assert pretty_name("Họ và tên NGUYỄN VĂN AN") == "NGUYEN VAN AN"
     assert pretty_name("HO VA TEN NGUYEN VAN AN") == "NGUYEN VAN AN"

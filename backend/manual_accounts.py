@@ -42,6 +42,61 @@ def exception_usernames() -> List[str]:
     return names
 
 
+def _write_accounts(accounts: List[Tuple[str, str]]) -> None:
+    path = accounts_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "users": [{"username": username, "password": password} for username, password in accounts]
+    }
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def upsert_account(original: str, username: str, password: str) -> str:
+    """Thêm hoặc sửa một tài khoản. Trả về lỗi, hoặc chuỗi rỗng khi đã ghi."""
+    username = (username or "").strip()
+    password = (password or "").strip()
+    original = (original or "").strip()
+    if not username or not password:
+        return "Fill in username and password."
+    if any(ch.isspace() for ch in username):
+        return "Username cannot contain spaces."
+    if original.lower() == "pkq" and username.lower() != "pkq":
+        return "The admin username pkq cannot be changed."
+    rows = load_manual_accounts()
+    for saved, _password in rows:
+        if saved.lower() == username.lower() and saved.lower() != original.lower():
+            return "That username already exists."
+    updated: List[Tuple[str, str]] = []
+    replaced = False
+    for saved, saved_pass in rows:
+        if original and saved.lower() == original.lower():
+            updated.append((username, password))
+            replaced = True
+        else:
+            updated.append((saved, saved_pass))
+    if original and not replaced:
+        return "That user was not found."
+    if not original:
+        updated.append((username, password))
+    _write_accounts(updated)
+    return ""
+
+
+def delete_account(username: str) -> str:
+    """Xóa một tài khoản. Không xóa pkq."""
+    username = (username or "").strip()
+    if not username:
+        return "That user was not found."
+    if username.lower() == "pkq":
+        return "The admin user pkq cannot be deleted."
+    rows = load_manual_accounts()
+    kept = [(saved, password) for saved, password in rows if saved.lower() != username.lower()]
+    if len(kept) == len(rows):
+        return "That user was not found."
+    _write_accounts(kept)
+    return ""
+
+
 def is_exception_user(username: str) -> bool:
     key = (username or "").strip().lower()
     if not key:

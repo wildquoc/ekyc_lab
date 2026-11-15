@@ -146,3 +146,31 @@ def test_second_manual_account_also_opens_welcome():
     engine.submit("start_manual")
     allowed = _login(engine, "lha", "204130")
     assert allowed["screen"] == "welcome"
+
+
+def test_enter_admin_accepts_only_pkq():
+    engine = SessionEngine()
+    _login(engine, "lha", "204130")
+    denied = engine.submit("enter_admin")
+    assert denied["screen"] == "landing"
+    assert denied["landingNotice"] == "Only pkq can open Admin."
+    assert engine.fields["username"] == ""
+
+    _login(engine, "pkq", "204120")
+    opened = engine.submit("enter_admin")
+    assert opened["screen"] == "users"
+    assert engine.camera_on is False
+
+
+def test_account_admin_edits_users_without_removing_pkq(tmp_path, monkeypatch):
+    path = tmp_path / "accounts.json"
+    path.write_text('{"users":[{"username":"pkq","password":"204120"}]}\n', encoding="utf-8")
+    monkeypatch.setattr("manual_accounts.accounts_file", lambda: path)
+    from manual_accounts import delete_account, load_manual_accounts, upsert_account
+
+    assert upsert_account("", "lha", "204130") == ""
+    assert upsert_account("lha", "lha", "999") == ""
+    assert "cannot be changed" in upsert_account("pkq", "other", "1")
+    assert "cannot be deleted" in delete_account("pkq")
+    assert delete_account("lha") == ""
+    assert load_manual_accounts() == [("pkq", "204120")]

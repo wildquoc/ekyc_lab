@@ -271,6 +271,29 @@ class Bridge(QObject):
     def goHome(self) -> None:
         self._submit("go_home")
 
+    @Slot()
+    def enterAdmin(self) -> None:
+        self._submit("enter_admin")
+
+    @Slot(result=str)
+    def accountList(self) -> str:
+        from manual_accounts import load_manual_accounts
+
+        rows = [{"username": username, "password": password} for username, password in load_manual_accounts()]
+        return json.dumps(rows, ensure_ascii=False)
+
+    @Slot(str, str, str, result=str)
+    def saveAccount(self, original: str, username: str, password: str) -> str:
+        from manual_accounts import upsert_account
+
+        return upsert_account(original, username, password)
+
+    @Slot(str, result=str)
+    def deleteAccount(self, username: str) -> str:
+        from manual_accounts import delete_account
+
+        return delete_account(username)
+
     @Slot(float, float, float, float)
     def setOval(self, x: float, y: float, w: float, h: float) -> None:
         geom = (float(x), float(y), float(w), float(h))

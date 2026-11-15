@@ -6,7 +6,7 @@ import json
 import threading
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from fkyc.hud_en import to_en
 
@@ -223,6 +223,7 @@ class SessionEngine:
         self._services_lock = threading.Lock()
         self._ocr_lock = threading.Lock()
         self._ocr_job: Optional[np.ndarray] = None
+        self._ocr_known: Optional[Dict[str, Any]] = None
         self._ocr_result: Optional[Dict[str, Any]] = None
         self._snapshot_pending: Optional[np.ndarray] = None
         self._snapshot_seq = 0
@@ -342,6 +343,8 @@ class SessionEngine:
                 fields=dict(self.fields),
                 stepBlocked=False,
             )
+        if command == "enter_admin":
+            return self._enter_admin()
         if command == "confirm":
             return self._confirm()
         if command == "redo":
@@ -365,6 +368,7 @@ class SessionEngine:
         self._capture_sent = False
         with self._ocr_lock:
             self._ocr_job = None
+            self._ocr_known = None
             self._ocr_result = None
         return self._mark(
             screen=screen,
@@ -412,6 +416,38 @@ class SessionEngine:
             flashActive=False,
             prompt="Welcome",
             fields=dict(self.fields),
+        )
+
+    def _enter_admin(self) -> Dict[str, Any]:
+        user = (self.fields.get("username") or self._account or "").strip().lower()
+        if user != "pkq":
+            self._account = ""
+            self._replace_id = ""
+            self.fields["username"] = ""
+            self.fields["faceReady"] = ""
+            self._close_session()
+            self.camera_on = False
+            return self._mark(
+                screen="landing",
+                cameraActive=False,
+                errorText="",
+                busy=False,
+                captureHint=False,
+                flashActive=False,
+                fields=dict(self.fields),
+                landingNotice="Only pkq can open Admin.",
+            )
+        self.camera_on = False
+        self._close_session()
+        return self._mark(
+            screen="users",
+            cameraActive=False,
+            errorText="",
+            busy=False,
+            captureHint=False,
+            flashActive=False,
+            prompt="",
+            landingNotice="",
         )
 
     def _default_prompt(self, screen: str) -> str:
@@ -469,6 +505,7 @@ class SessionEngine:
             "citizenResult",
             "studentResult",
             "faceResult",
+            "users",
         ):
             return {}
         hint = (time.time() - self._step_started) >= HINT_SEC
@@ -615,14 +652,23 @@ class SessionEngine:
         return ocr_engine
 
     def offer_ocr_job(self, frame: np.ndarray) -> None:
+        from id_card_ocr import valid_person_name
+
+        known = {
+            "id_number": (self.fields.get("citizenId") or "").strip() or None,
+            "full_name": valid_person_name(self.fields.get("fullName")),
+        }
         with self._ocr_lock:
             self._ocr_job = frame
+            self._ocr_known = known
 
-    def take_ocr_job(self) -> Optional[np.ndarray]:
+    def take_ocr_job(self) -> Tuple[Optional[np.ndarray], Optional[Dict[str, Any]]]:
         with self._ocr_lock:
             job = self._ocr_job
+            known = self._ocr_known
             self._ocr_job = None
-        return job
+            self._ocr_known = None
+        return job, known
 
     def push_ocr_result(self, result: Dict[str, Any]) -> None:
         with self._ocr_lock:

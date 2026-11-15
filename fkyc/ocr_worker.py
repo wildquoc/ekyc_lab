@@ -25,12 +25,12 @@ class OcrWorker(QThread):
             ocr._load()
             time.sleep(0.04)
         while self._running:
-            job = self._engine.take_ocr_job()
+            job, known = self._engine.take_ocr_job()
             if job is None:
                 time.sleep(0.012)
                 continue
             try:
-                result = ocr.scan(job, known_fields=None)
+                result = ocr.scan(job, known_fields=known)
             except Exception as exc:
                 result = {
                     "ocr_ready": ocr.ready,

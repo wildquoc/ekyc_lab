@@ -5,6 +5,7 @@ import "../components"
 Item {
     id: page
     property string notice: ""
+    property string brand: "FKYC"
     property real unit: 1
     property real ox: 0
     property real oy: 0
@@ -28,15 +29,15 @@ Item {
         height: 84 * page.unit
         Row {
             anchors.centerIn: parent
-            spacing: 78 * page.unit
+            spacing: (page.brand.length > 4 ? 16 : 78) * page.unit
             Repeater {
-                model: ["F", "K", "Y", "C"]
+                model: page.brand.length
                 Text {
-                    required property string modelData
-                    text: modelData
+                    required property int index
+                    text: page.brand.charAt(index)
                     color: "#ffffff"
                     font.family: Theme.fontFamily
-                    font.pixelSize: 78 * page.unit
+                    font.pixelSize: (page.brand.length > 4 ? 64 : 78) * page.unit
                     font.weight: Font.Bold
                 }
             }

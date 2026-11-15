@@ -257,7 +257,9 @@ def _looks_like_name(text: str) -> bool:
         return False
     if _is_address_text(text) or _is_address_text(cleaned):
         return False
-    if fold(words[0]) not in _COMMON_SURNAMES:
+    if fold(words[0]) not in _FAMILY_NAMES:
+        return False
+    if not _is_incomplete_name(cleaned) and not _known_given(words[-1]):
         return False
     return True
 
@@ -296,6 +298,37 @@ _COMMON_SURNAMES = {
     "tong", "kim", "chu", "han", "lu", "che", "quach", "phung", "giang",
     "vuong", "trang", "hong", "bach", "diep", "khuat", "lao", "nghiep",
 }
+
+
+def _load_name_list(filename: str) -> frozenset:
+    try:
+        from paths import names_dir
+    except ImportError:
+        from backend.paths import names_dir
+
+    path = names_dir() / filename
+    if not path.is_file():
+        return frozenset()
+    words = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        token = fold(line.strip())
+        if token and re.fullmatch(r"[a-z]+", token):
+            words.add(token)
+    return frozenset(words)
+
+
+# Họ: file + các họ phổ biến đã dùng trước đó (file thiếu Trần, Hồ).
+_FAMILY_NAMES = _load_name_list("family_name.txt") | _COMMON_SURNAMES
+# Tên cuối. Rỗng thì không chặn, để máy thiếu file vẫn đọc được.
+_GIVEN_NAMES = _load_name_list("first_name.txt")
+
+
+def _known_given(word: str) -> bool:
+    if not _GIVEN_NAMES:
+        return True
+    return fold(word) in _GIVEN_NAMES
+
+
 # "Thị" / "Văn" là chữ đệm — "NGUYEN THI" chưa phải họ tên đầy đủ
 _NAME_PARTICLES = {"thi", "van", "huu", "duc", "cong", "dinh"}
 _VN_VOWELS = set("aeiouyăâêôơưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵđ")
@@ -384,10 +417,12 @@ def _name_score(name: str) -> float:
     for word in parts:
         if not _vn_name_syllable(word):
             return -1.0
-    if fold(parts[0]) not in _COMMON_SURNAMES:
+    if fold(parts[0]) not in _FAMILY_NAMES:
         return -1.0
     if _is_incomplete_name(name):
         return 2.0
+    if not _known_given(parts[-1]):
+        return -1.0
     score = float(len(parts) * 3)
     if 3 <= len(parts) <= 4:
         score += 8
@@ -406,6 +441,8 @@ def pretty_name(text: str) -> Optional[str]:
     """Họ tên: lấy các tiếng đầu (họ→đệm→tên), cắt trước Sex/Ngày sinh."""
     words = _name_words(text)
     if len(words) < 2:
+        return None
+    if _is_address_text(" ".join(words)):
         return None
     best: Optional[str] = None
     best_score = 5.5
@@ -513,10 +550,12 @@ def pick_name(*texts: str) -> Optional[str]:
         return best
     if (
         len(collected) >= 2
-        and fold(collected[0]) in _COMMON_SURNAMES
+        and fold(collected[0]) in _FAMILY_NAMES
         and not _is_address_text(" ".join(collected[:2]))
     ):
-        return plain_name(" ".join(collected[: min(5, len(collected))])).upper()
+        parts = collected[: min(5, len(collected))]
+        if _is_incomplete_name(" ".join(parts)) or _known_given(parts[-1]):
+            return plain_name(" ".join(parts)).upper()
     return None
 
 
@@ -541,9 +580,11 @@ def draft_person_name(name: Optional[str]) -> Optional[str]:
     if cand:
         return cand
     words = _name_words(name)
-    if len(words) >= 2 and fold(words[0]) in _COMMON_SURNAMES:
+    if len(words) >= 2 and fold(words[0]) in _FAMILY_NAMES:
         draft = plain_name(" ".join(words[: min(5, len(words))])).upper()
-        if not _is_address_text(draft):
+        if _is_address_text(draft):
+            return None
+        if _is_incomplete_name(draft) or _known_given(words[-1]):
             return draft
     return None
 
@@ -812,6 +853,45 @@ def prefer_gender(old: Optional[str], new: Optional[str]) -> Optional[str]:
     if new == "Nữ" or old == "Nữ":
         return "Nữ"
     return new or old or None
+
+
+def open_roi_keys(
+    fields: Dict[str, Optional[str]],
+) -> Tuple[str, ...]:
+    """Chỉ OCR trường chưa chốt. Họ tên đã đủ và số CCCD không đọc lại."""
+    needed: List[str] = []
+    if not fields.get("id_number"):
+        needed.append("id_number")
+    if not valid_person_name(fields.get("full_name")):
+        needed.append("full_name")
+    if not fields.get("dob"):
+        needed.append("dob")
+    if not fields.get("gender"):
+        needed.append("sex")
+    return tuple(needed)
+
+
+def _keep_known(
+    base: Dict[str, Optional[str]],
+    parsed: Dict[str, Optional[str]],
+) -> Dict[str, Optional[str]]:
+    """Giữ trường đã đúng. Chỉ lấy giá trị mới khi trường đó còn trống hoặc chưa đủ tên."""
+    dob = prefer_dob(base.get("dob"), parsed.get("dob"))
+    gender = prefer_gender(base.get("gender"), parsed.get("gender"))
+    name = prefer_name(base.get("full_name"), parsed.get("full_name"))
+    if not name:
+        name = parsed.get("full_name") or base.get("full_name")
+    return {
+        "id_number": prefer_id(
+            base.get("id_number"),
+            parsed.get("id_number"),
+            dob,
+            gender,
+        ),
+        "full_name": name,
+        "dob": dob,
+        "gender": gender,
+    }
 
 
 def prefer_dob(old: Optional[str], new: Optional[str]) -> Optional[str]:
@@ -1687,9 +1767,22 @@ class IdCardOCREngine:
             return self.read_lines(img_bgr)
 
     def _ocr_name_crop(self, crop: Optional[np.ndarray]) -> str:
-        """OCR từng tiếng trên dòng tên rồi ghép — không để VietOCR nuốt chữ cuối."""
+        """Đọc cả dòng trước. Chỉ tách từng tiếng khi dòng đó chưa đủ họ tên."""
         if crop is None or crop.size == 0:
             return ""
+        quick: List[str] = []
+        for strip in tight_line_crops(crop, max_lines=2):
+            if not _ink_enough(strip):
+                continue
+            enhanced = prepare_ocr_line(strip)
+            if enhanced is None or enhanced.size == 0:
+                continue
+            text = self._onnx.predict(enhanced, max_len=28, max_width=800)
+            if text:
+                quick.append(text)
+        joined = "\n".join(quick)
+        if valid_person_name(joined):
+            return joined
         parts: List[str] = []
         for strip in tight_line_crops(crop, max_lines=2):
             if not _ink_enough(strip):
@@ -1710,6 +1803,8 @@ class IdCardOCREngine:
                     bits.append(first)
                 if bits:
                     parts.append(" ".join(bits))
+                    if valid_person_name("\n".join(parts)):
+                        return "\n".join(parts)
                     continue
             enhanced = prepare_ocr_line(strip)
             if enhanced is None or enhanced.size == 0:
@@ -1720,13 +1815,27 @@ class IdCardOCREngine:
         return "\n".join(parts)
 
     def _ocr_sex_crop(self, crop: Optional[np.ndarray]) -> str:
-        """OCR từng tiếng trong ô giới tính — tránh VietOCR nuốt 'Nữ' vì 'Việt Nam'."""
+        """Đọc cả ô trước. Chỉ tách từng tiếng khi chưa ra Nam hoặc Nữ."""
         if crop is None or crop.size == 0:
             return ""
-        parts: List[str] = []
         strips = line_strips(crop, max_lines=2)
         if not strips:
             strips = [crop]
+        quick: List[str] = []
+        for strip in strips:
+            if not _ink_enough(strip):
+                continue
+            enhanced = prepare_ocr_line(strip)
+            if enhanced is None or enhanced.size == 0:
+                continue
+            text = self._onnx.predict(
+                enhanced, max_len=ROI_MAX_LEN["sex"], max_width=ROI_MAX_WIDTH["sex"]
+            )
+            if text:
+                quick.append(text)
+        if normalize_gender(" ".join(quick)):
+            return " ".join(quick)
+        parts: List[str] = []
         for strip in strips:
             if not _ink_enough(strip):
                 continue
@@ -1838,15 +1947,16 @@ class IdCardOCREngine:
         lighting_bad = _lighting_issue(quality.get("issue"))
 
         rois = crop_chip_rois(warped)
-        keys: Tuple[str, ...] = ("dob", "sex") if focus_lower else (
-            "id_number",
-            "full_name",
-            "dob",
-            "sex",
-        )
+        held = {
+            "id_number": resp["fields"].get("id_number"),
+            "full_name": resp["fields"].get("full_name"),
+            "dob": resp["fields"].get("dob"),
+            "gender": resp["fields"].get("gender"),
+        }
         with self._infer_lock:
-            raw = self._predict_rois(rois, keys)
-            fields = fields_from_roi_texts(raw)
+            keys = open_roi_keys(held)
+            raw = self._predict_rois(rois, keys) if keys else {}
+            fields = _keep_known(held, fields_from_roi_texts(raw) if raw else {})
             if not fields.get("dob") or not fields.get("gender"):
                 raw["lower_row"] = self._ocr_crop(
                     rois.get("lower_row"),
@@ -1854,20 +1964,10 @@ class IdCardOCREngine:
                     max_width=ROI_MAX_WIDTH["lower_row"],
                     max_lines=3,
                 )
-                extra = fields_from_roi_texts(raw)
-                fields["dob"] = fields.get("dob") or extra.get("dob")
-                fields["gender"] = fields.get("gender") or extra.get("gender")
-            weak_name = _is_incomplete_name(fields.get("full_name"))
-            if (
-                not fields.get("id_number")
-                or weak_name
-                or not fields.get("dob")
-                or not fields.get("gender")
-            ):
+                fields = _keep_known(fields, fields_from_roi_texts(raw))
+            if open_roi_keys(fields):
                 rois_new = crop_chip_rois(warped, layout="new")
-                alt_keys: Tuple[str, ...] = keys
-                if fields.get("id_number") and not weak_name:
-                    alt_keys = ("dob", "sex")
+                alt_keys = open_roi_keys(fields)
                 raw_new = self._predict_rois(rois_new, alt_keys)
                 if not fields.get("dob") or not fields.get("gender"):
                     raw_new["lower_row"] = self._ocr_crop(
@@ -1876,25 +1976,9 @@ class IdCardOCREngine:
                         max_width=ROI_MAX_WIDTH["lower_row"],
                         max_lines=3,
                     )
-                extra_new = fields_from_roi_texts(raw_new)
-                fields["id_number"] = prefer_id(
-                    fields.get("id_number"),
-                    extra_new.get("id_number"),
-                    fields.get("dob") or extra_new.get("dob"),
-                    fields.get("gender") or extra_new.get("gender"),
-                )
-                if weak_name or not valid_person_name(fields.get("full_name")):
-                    fields["full_name"] = (
-                        prefer_name(fields.get("full_name"), extra_new.get("full_name"))
-                        or extra_new.get("full_name")
-                        or fields.get("full_name")
-                    )
-                fields["dob"] = prefer_dob(fields.get("dob"), extra_new.get("dob"))
-                fields["gender"] = prefer_gender(fields.get("gender"), extra_new.get("gender"))
+                fields = _keep_known(fields, fields_from_roi_texts(raw_new))
                 raw.update({f"new_{k}": v for k, v in raw_new.items() if v})
-            weak_name = _is_incomplete_name(fields.get("full_name"))
-            weak_dob = not fields.get("dob")
-            if not fields.get("id_number") or weak_name or weak_dob or not fields.get("gender"):
+            if open_roi_keys(fields):
                 panel_lines = self._read_panel_lines(warped)
                 raw["panel"] = " | ".join(panel_lines)
                 parsed = parse_cccd_lines(panel_lines)
@@ -1909,7 +1993,7 @@ class IdCardOCREngine:
                     fields.get("dob") or parsed.get("dob"),
                     fields.get("gender") or parsed.get("gender"),
                 )
-                if weak_name or not valid_person_name(fields.get("full_name")):
+                if not valid_person_name(fields.get("full_name")):
                     fields["full_name"] = (
                         prefer_name(fields.get("full_name"), layout_name)
                         or prefer_name(fields.get("full_name"), parsed_name)
@@ -2032,11 +2116,7 @@ class IdCardOCREngine:
         t0 = time.perf_counter()
         known = known_fields or {}
         locked_id = (known.get("id_number") or "").strip() or None
-        locked_name = (known.get("full_name") or "").strip() or None
-        if locked_name and not _looks_like_name(locked_name):
-            locked_name = None
-        elif locked_name:
-            locked_name = _clean_name(locked_name)
+        locked_name = valid_person_name((known.get("full_name") or "").strip() or None)
         focus_lower = bool(locked_id and locked_name)
 
         resp: Dict[str, Any] = {

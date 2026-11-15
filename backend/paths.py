@@ -21,6 +21,11 @@ def models_dir() -> Path:
     return resource_root() / "backend" / "models"
 
 
+def names_dir() -> Path:
+    """Danh sách họ và tên cuối dùng để loại họ tên OCR đọc sai."""
+    return resource_root() / "backend" / "names"
+
+
 def qml_dir() -> Path:
     return resource_root() / "fkyc" / "qml"
 

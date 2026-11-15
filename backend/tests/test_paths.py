@@ -13,6 +13,9 @@ def test_dev_layout_not_frozen():
     assert paths.models_dir() == root / "backend" / "models"
     assert paths.models_dir().joinpath("minifasnet_v2.onnx").is_file()
     assert paths.models_dir().joinpath("vietocr", "cnn.onnx").is_file()
+    assert paths.names_dir() == root / "backend" / "names"
+    assert paths.names_dir().joinpath("family_name.txt").is_file()
+    assert paths.names_dir().joinpath("first_name.txt").is_file()
     data = paths.data_dir()
     assert data == Path(paths.__file__).resolve().parent / "data"
     assert data.is_dir()

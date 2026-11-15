@@ -319,6 +319,36 @@ def test_line_strips_splits_two_rows():
     assert len(word_crops(line)) >= 3
 
 
+def test_open_roi_keys_skip_fields_already_read():
+    from id_card_ocr import open_roi_keys
+
+    assert open_roi_keys(
+        {
+            "id_number": "079203001234",
+            "full_name": "NGUYEN VAN AN",
+            "dob": None,
+            "gender": None,
+        }
+    ) == ("dob", "sex")
+    assert open_roi_keys(
+        {
+            "id_number": None,
+            "full_name": "NGUYEN VAN",
+            "dob": "15/08/2003",
+            "gender": "Nam",
+        }
+    ) == ("id_number", "full_name")
+
+
+def test_name_lists_reject_unknown_surname_and_given():
+    assert pretty_name("NGUYEN VAN AN") == "NGUYEN VAN AN"
+    assert pretty_name("ZAN VAN AN") is None
+    assert pretty_name("NGUYEN VAN ZAN") is None
+    assert pretty_name("NGUYEN VAN AN ZAN") == "NGUYEN VAN AN"
+    from id_card_ocr import valid_person_name
+    assert valid_person_name("TRAN THI BICH NGOC") == "TRAN THI BICH NGOC"
+
+
 def test_pretty_name_strips_label_prefix():
     assert pretty_name("Họ và tên NGUYỄN VĂN AN") == "NGUYEN VAN AN"
     assert pretty_name("HO VA TEN NGUYEN VAN AN") == "NGUYEN VAN AN"

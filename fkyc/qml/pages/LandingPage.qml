@@ -23,13 +23,13 @@ Item {
     }
 
     Item {
-        x: page.ox + 244 * page.unit
+        x: page.ox + 109 * page.unit
         y: page.oy + 408 * page.unit
-        width: 450 * page.unit
+        width: 720 * page.unit
         height: 84 * page.unit
         Row {
             anchors.centerIn: parent
-            spacing: (page.brand.length > 4 ? 16 : 78) * page.unit
+            spacing: (page.brand.length > 4 ? 40 : 78) * page.unit
             Repeater {
                 model: page.brand.length
                 Text {
@@ -37,7 +37,7 @@ Item {
                     text: page.brand.charAt(index)
                     color: "#ffffff"
                     font.family: Theme.fontFamily
-                    font.pixelSize: (page.brand.length > 4 ? 64 : 78) * page.unit
+                    font.pixelSize: 78 * page.unit
                     font.weight: Font.Bold
                 }
             }
